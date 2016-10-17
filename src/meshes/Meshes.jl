@@ -2,6 +2,8 @@ __precompile__()
 
 module Meshes
 
+export Mesh, TensorProductMesh, UnitSquare, UnitCube
+
 include("topology.jl")
 
 using .Topology
@@ -132,5 +134,7 @@ function evalFunction{T<:Float}(m::Mesh, f::Function, points::AbstractArray{T,2}
     R = reshape(R, nE, nP, size(R,2))
 end
 
+# Mesh Generation
+include("generation.jl")
 
 end # of module Meshes
