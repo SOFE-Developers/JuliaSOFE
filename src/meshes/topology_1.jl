@@ -7,8 +7,7 @@ type MeshTopologyX <: AbstractMeshTopology
     nodes :: Array{AbstractFloat, 2}
     connectivities :: Dict{Tuple{Int, Int}, Array{Int,2}}
 
-    function MeshTopologyX{Tn<:AbstractFloat, Te<:Integer}
-        (nodes::AbstractArray{Tn,2}, elems::AbstractArray{Te,2})
+    function MeshTopologyX{Tn<:AbstractFloat, Te<:Integer}(nodes::AbstractArray{Tn,2}, elems::AbstractArray{Te,2})
         dim = size(nodes, 2)
         connect = Dict((dim,0) => elems)
         return new(dim, nodes, connect)
@@ -37,12 +36,12 @@ function getNumber(mt::MeshTopologyX, d::Integer)
     return size(getEntities(mt, d), 1)
 end
 
-function isBoundary(mt::MeshTopologyX, f=x->x[:,1].>Inf)
+function getBoundary(mt::MeshTopologyX, f::Function=x->true)
     e2F = mt.super.connectivities[(2,1)][:]
     R = (sparse(e2F, Array{Int64}(ones(length(e2F))), Array{Int64}(ones(length(e2F)))).==1)[:];
-    face = getEntities(mt, 1)
+    face = getEntities(mt, mt.dimension-1)
     center = permutedims(sum(mt.super.nodes[face,:],2)/size(face,2), [1 3 2])
-    R = R & where(center)
+    R = R & f(center)
     return R
 end
 
@@ -56,8 +55,7 @@ getDim(mt::MeshTopologyX) = mt.super.dimension
 type MeshTopologyTri <: AbstractMeshTopology
     super :: MeshTopologyX
 
-    function MeshTopologyTri{Tn<:AbstractFloat, Te::Integer}
-        (nodes::AbstractArray{Tn,2}, elems::AbstractArray{Te,2})
+    function MeshTopologyTri{Tn<:AbstractFloat, Te<:Integer}(nodes::AbstractArray{Tn,2}, elems::AbstractArray{Te,2})
         mt = new(MeshTopologyX(nodes, elems))
         updateConnectivity(mt)
         return mt
@@ -95,8 +93,7 @@ end
 type MeshTopologyQuad <: AbstractMeshTopology
     super :: MeshTopologyX
 
-    function MeshTopologyQuad{Tn<:AbstractFloat, Te::Integer}
-        (nodes::AbstractArray{Tn,2}, elems::AbstractArray{Te,2})
+    function MeshTopologyQuad{Tn<:AbstractFloat, Te<:Integer}(nodes::AbstractArray{Tn,2}, elems::AbstractArray{Te,2})
         mt = new(MeshTopologyX(nodes, elems))
         updateConnectivity(mt)
         return mt
@@ -105,7 +102,7 @@ end
 
 function updateConnectivity(mt::MeshTopologyQuad)
     D = getDim(mt)
-    setConnectivity(mt, 0, 0, [1:getNumber(mt, 0;]);
+    setConnectivity(mt, 0, 0, [1:getNumber(mt, 0)]);
     setConnectivity(mt, 1, 0, sort([getConnectivity(mt, 2, 0)[:,[1,2]];
                                     getConnectivity(mt, 2, 0)[:,[3,4]];
                                     getConnectivity(mt, 2, 0)[:,[1,3]];

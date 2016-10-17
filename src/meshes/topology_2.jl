@@ -1,3 +1,5 @@
+import Combinatorics: combinations
+
 #-----------------------#
 # Type MeshConnectivity #
 #-----------------------#
@@ -114,8 +116,31 @@ function getNumber(mt::MeshTopologyGeneric, d::Integer)
     return size(getEntities(mt, d), 1)
 end
 
-function isBoundary(mt::MeshTopology)
+"""
 
+    getBoundary(mt::MeshTopologyGeneric, d::Integer)
+
+Determine the boundary entities of topological dimension `d`.
+"""
+function getBoundary(mt::MeshTopologyGeneric, d::Integer)
+    D = getDim(mt) # mt.dimension
+    D_Dm1 = getConnectivity(mt, D-1, D)
+    bmask = [length(r) == 1 for r in D_Dm1]
+
+    if d == D-1
+        return bmask
+    else
+        d_Dm1 = getConnectivity(mt, d, D-1)
+        bind = find(bmask)
+        bmask = [any(i in bind for i in r) for r in d_Dm1]
+    end
+end
+
+getBoundary(mt::MeshTopologyGeneric) = getBoundary(mt, getDim(mt)-1)
+
+function getBoundary(mt::MeshTopologyGeneric, f::Function)
+    bmask = getBoundary(mt)
+    error("Not implemented yet...!")
 end
 
 """
@@ -238,7 +263,6 @@ end
 Compute the incidence relation `dd -> d` from `d -> dd`
 for `d > dd`.
 """
-import Base.transpose!
 function transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     @assert d > dd
     # get connectivity d -> dd
@@ -328,4 +352,3 @@ function vertex_sets(mt::MeshTopologyGeneric, d::Integer)
     return V
 end
 
-  
