@@ -2,7 +2,7 @@ __precompile__()
 
 module JuliaSOFE
 
-# package code goes here
+include(joinpath(dirname(@__FILE__), "meshes", "Meshes.jl"))
 
 end # of module JuliaSOFE
 
