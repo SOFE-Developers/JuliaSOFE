@@ -57,16 +57,25 @@ Base.length(mc::MeshConnectivity) = size(mc, 1)
 Stores the topology of a mesh as a set of incidence relations.
 """
 type MeshTopologyGeneric <: AbstractMeshTopology
-    dimension :: Int
+    dimension :: Integer
+    nodes :: AbstractArray{AbstractFloat, 2}
     connectivities :: Dict{Tuple{Int, Int}, MeshConnectivity}
 
-    MeshTopologyGeneric(dim::Integer, connect::Dict{Tuple{Int,Int}, MeshConnectivity}) =
-        new(Int(dim), connect)
+    MeshTopologyGeneric{T<:AbstractFloat}(dim::Integer, nodes::AbstractArray{T,2},
+                                          connect::Dict{Tuple{Int,Int}, MeshConnectivity}) =
+        new(dim, nodes, connect)
 end
 
 # Outer Constructors
 # -------------------
-MeshTopologyGeneric(dim::Integer) = MeshTopologyGeneric(dim, Dict{Tuple{Int,Int}, MeshConnectivity}())
+MeshTopologyGeneric{T<:AbstractFloat}(dim::Integer, nodes::AbstractArray{T,2}) =
+    MeshTopologyGeneric(dim, nodes, Dict{Tuple{Int,Int}, MeshConnectivity}())
+function MeshTopologyGeneric{T<:AbstractFloat,S<:Integer}(dim::Integer, nodes::AbstractArray{T,2},
+                                                          cells::AbstractArray{S,2})
+    mt = MeshTopologyGeneric(dim, nodes)
+    init!(mt, cells)
+    return mt
+end
 
 # Associated Methods
 # -------------------
@@ -76,6 +85,8 @@ function Base.show(io::IO, mt::MeshTopologyGeneric)
     println(io, "\tconnectivities : ",
             ["\n\t\t$connect" for connect in mt.connectivities]...)
 end
+
+getNodes(mt::MeshTopologyGeneric) = mt.nodes
 
 """
 Return the spatial dimension of the mesh topology,
