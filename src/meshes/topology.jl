@@ -1,7 +1,7 @@
 module Topology
 
-#export MeshTopologyX, MeshTopologyGeneric
-#export getDim, getConnectivity
+export AbstractMeshTopology, MeshTopologyTri, MeshTopologyQuad, MeshTopologyGeneric
+export getDim, getNodes, getConnectivity, getEntities
 
 #-----------------------------#
 # Abstract Mesh Topology Type #
@@ -10,7 +10,6 @@ abstract AbstractMeshTopology
 
 # Associated Methods
 # -------------------
-
 """
 Return the spatial dimension of the mesh topology,
 i.e. he topological dimension of the cells.
@@ -51,8 +50,35 @@ Determine the boundary facets.
 function getBoundary(mt::AbstractMeshTopology) end
 function getBoundary(mt::AbstractMeshTopology, f::Function) end
 
+#------------------------------#
+# Concrete Mesh Topology Types #
+#------------------------------#
+
+USE_GENERIC = false
+
 # Include Concrete Type Implementations
-include("topology_1.jl")
-include("topology_2.jl")
+if !USE_GENERIC
+    include("topology_1.jl")
+else
+    include("topology_2.jl")
+end
+
+"""
+Return a mesh topology instance of appropriate type. 
+"""
+function MeshTopology(nodes, cells)
+    if !USE_GENERIC
+        if size(cells, 2) == 3
+            return MeshTopologyTri(nodes, cells)
+        elseif size(cells, 2) == 4
+            return MeshTopologyQuad(nodes, cells)
+        else
+            error("Invalid cell connectivity!")
+        end
+    else
+        return MeshTopologyGeneric(size(nodes, 2), cells)
+    end
+end
+
 
 end # of module Topology
