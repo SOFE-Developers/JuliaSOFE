@@ -31,7 +31,7 @@ Evaluate the element's shape (basis) functions at given `points`
 on the reference domain.
 """
 function evalBasis{T<:AbstractFloat}(el::AbstractElement,
-                                     points::AbstractArray{T,1},
+                                     points::AbstractArray{T,2},
                                      deriv::Integer=0)
     if deriv == 0
         return evalD0Basis(el, points) # nB x nP
