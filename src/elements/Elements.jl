@@ -6,6 +6,8 @@ export AbstractElement, LagrangeP1, LagrangeQ1
 
 abstract AbstractElement
 
+typealias Float AbstractFloat
+
 #--------------#
 # Type Element #
 #--------------#
