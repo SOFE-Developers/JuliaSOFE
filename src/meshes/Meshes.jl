@@ -4,8 +4,9 @@ module Meshes
 
 export Mesh, TensorProductMesh, UnitSquare, UnitCube
 
-include("topology.jl")
+using ..Elements
 
+include("topology.jl")
 using .Topology
 
 #--------------------#
@@ -27,9 +28,9 @@ type Mesh <: AbstractMesh
                                         cells::AbstractArray{S,2})
         dim = size(nodes, 2)
         if size(cells, 2) == 3
-            element = P1(dim)
+            element = LagrangeP1(dim)
         elseif size(cells, 2) == 4
-            element = Q1(dim)
+            element = LagrangeQ1(dim)
         else
             error()
         end

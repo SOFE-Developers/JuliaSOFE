@@ -1,7 +1,7 @@
 module Topology
 
 export AbstractMeshTopology, MeshTopologyTri, MeshTopologyQuad, MeshTopologyGeneric
-export getDim, getNodes, getConnectivity, getEntities
+export MeshTopology, getDim, getNodes, getConnectivity, getEntities, getNumber
 
 #-----------------------------#
 # Abstract Mesh Topology Type #
@@ -76,7 +76,7 @@ function MeshTopology(nodes, cells)
             error("Invalid cell connectivity!")
         end
     else
-        return MeshTopologyGeneric(size(nodes, 2), cells)
+        return MeshTopologyGeneric(size(nodes, 2), nodes, cells)
     end
 end
 

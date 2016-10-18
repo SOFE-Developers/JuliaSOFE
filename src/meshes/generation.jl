@@ -50,11 +50,11 @@ function TensorProductMesh{T<:AbstractFloat}(grids::AbstractArray{T,1}...)
         if false
             # with copy
             cells = vcat(C[:,[1,2,3]],
-                         C[:,[2,3,4]])
+                         C[:,[4,3,2]])
         else
             # w/o copy
             cells = reshape(view(C, :, [1 2 3;
-                                        2 3 4]),
+                                        4 3 2]),
                             (2*length(I),3))
         end
     elseif dim == 3
