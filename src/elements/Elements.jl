@@ -2,6 +2,8 @@ __precompile__()
 
 module Elements
 
+export AbstractElement, LagrangeP1, LagrangeQ1
+
 abstract AbstractElement
 
 #--------------#
@@ -10,10 +12,10 @@ abstract AbstractElement
 type Element <: AbstractElement
     dim :: Integer
     order :: Integer
-    nBasis :: Array{Integer,1}
-    nVertices :: Array{Integer,1}
+    nBasis :: Tuple
+    nVertices :: Tuple
 
-    Element(dim, order, nB, nV) = new(dim, order, tuple(nB...), tuple(nV...))
+    Element(dim::Integer, order::Integer, nB, nV) = new(dim, order, tuple(nB...), tuple(nV...))
 end
 
 # Associated methods
@@ -48,7 +50,7 @@ end
 type LagrangeP1 <: AbstractElement
     super :: Element
 
-    LagrangeP1(dim::Integer) = new(Element(dim, collect(1:dim+1), collect(1:dim+1), 1))
+    LagrangeP1(dim::Integer) = new(Element(dim, 1, collect(1:dim+1), collect(1:dim+1)))
 end
 
 # Associated methods
@@ -84,3 +86,16 @@ function evalD2Basis{T<:AbstractFloat}(el::LagrangeP1, points::AbstractArray{T,2
 
     return B
 end
+
+#-----------------#
+# Type LagrangeQ1 #
+#-----------------#
+type LagrangeQ1 <: AbstractElement
+    super :: Element
+
+    LagrangeQ1(dim::Integer) = new(Element(dim, collect(1:dim+1), collect(1:dim+1), 1))
+end
+
+
+end # of module Elements
+
