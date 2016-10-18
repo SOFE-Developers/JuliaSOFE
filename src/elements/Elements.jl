@@ -52,7 +52,7 @@ end
 type LagrangeP1 <: AbstractElement
     super :: Element
 
-    LagrangeP1(dim::Integer) = new(Element(dim, 1, collect(1:dim+1), collect(1:dim+1)))
+    LagrangeP1(dim::Integer) = new(Element(dim, 1, collect(2:dim+1), collect(2:dim+1)))
 end
 
 # Associated methods
@@ -95,7 +95,7 @@ end
 type LagrangeQ1 <: AbstractElement
     super :: Element
 
-    LagrangeQ1(dim::Integer) = new(Element(dim, collect(1:dim+1), collect(1:dim+1), 1))
+    LagrangeQ1(dim::Integer) = new(Element(dim, 1, 2.^(1:dim), 2.^(1:dim)))
 end
 
 # Associated Methods
