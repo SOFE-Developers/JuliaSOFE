@@ -86,14 +86,6 @@ function Base.show(io::IO, mt::MeshTopologyGeneric)
             ["\n\t\t$connect" for connect in mt.connectivities]...)
 end
 
-getNodes(mt::MeshTopologyGeneric) = mt.nodes
-
-"""
-Return the spatial dimension of the mesh topology,
-i.e. he topological dimension of the cells.
-"""
-getDim(mt::MeshTopologyGeneric) = mt.dimension
-
 """
 
     getConnectivity(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
@@ -114,17 +106,6 @@ entities of topological dimension `d`.
 """
 function getEntities(mt::MeshTopologyGeneric, d::Integer)
     return collect(getConnectivity(mt, d, 0))
-end
-
-"""
-
-    getNumber(mt::MeshTopologyGeneric, d::Integer)
-
-Return the number of `d`-dimensional mesh entities.
-"""
-function getNumber(mt::MeshTopologyGeneric, d::Integer)
-    # return size(getConnectivity(mt, d, 0), 1)
-    return size(getEntities(mt, d), 1)
 end
 
 """

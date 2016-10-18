@@ -1,6 +1,6 @@
 module Topology
 
-export AbstractMeshTopology, MeshTopologyTri, MeshTopologyQuad, MeshTopologyGeneric
+export AbstractMeshTopology#, MeshTopologyTri, MeshTopologyQuad, MeshTopologyGeneric
 export MeshTopology, getDim, getNodes, getConnectivity, getEntities, getNumber
 
 #-----------------------------#
@@ -11,10 +11,25 @@ abstract AbstractMeshTopology
 # Associated Methods
 # -------------------
 """
+
+    getDim(mt::AbstractMeshTopology)
+
 Return the spatial dimension of the mesh topology,
 i.e. he topological dimension of the cells.
 """
-function getDim(mt::AbstractMeshTopology) end
+function getDim(mt::AbstractMeshTopology)
+    return mt.dimension
+end
+
+"""
+
+    getNodes(mt::AbstractMeshTopology)
+
+Return the coordinates of the mesh vertices.
+"""
+function getNodes(mt::AbstractMeshTopology)
+    return mt.nodes
+end
 
 """
 
@@ -22,7 +37,9 @@ function getDim(mt::AbstractMeshTopology) end
 
 Return the incidence relation `d -> dd` computing it first if necessary.
 """
-function getConnectivity(mt::AbstractMeshTopology, d::Integer, dd::Integer) end
+function getConnectivity(mt::AbstractMeshTopology, d::Integer, dd::Integer)
+    return mt.connectivities[(d,dd)]
+end
 
 """
 
@@ -39,7 +56,9 @@ function getEntities(mt::AbstractMeshTopology, d::Integer) end
 
 Return the number of `d`-dimensional mesh entities.
 """
-function getNumber(mt::AbstractMeshTopology, d::Integer) end
+function getNumber(mt::AbstractMeshTopology, d::Integer)
+    return size(getEntities(mt, d), 1)
+end
 
 """
 
@@ -54,10 +73,10 @@ function getBoundary(mt::AbstractMeshTopology, f::Function) end
 # Concrete Mesh Topology Types #
 #------------------------------#
 
-USE_GENERIC = false
+USE_X = true
 
 # Include Concrete Type Implementations
-if !USE_GENERIC
+if USE_X
     include("topology_1.jl")
 else
     include("topology_2.jl")
@@ -67,10 +86,12 @@ end
 Return a mesh topology instance of appropriate type. 
 """
 function MeshTopology(nodes, cells)
-    if !USE_GENERIC
+    if USE_X
         if size(cells, 2) == 3
+            # return MeshTopologyX(Tri, nodes, cells)
             return MeshTopologyTri(nodes, cells)
         elseif size(cells, 2) == 4
+            # return MeshTopologyX(Quad, nodes, cells)
             return MeshTopologyQuad(nodes, cells)
         else
             error("Invalid cell connectivity!")

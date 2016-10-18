@@ -17,75 +17,62 @@ function myUnique(a) # TODO
   return (ua, ind)
 end
 
-
-abstract AbstractMeshTopologyX <: AbstractMeshTopology
+typealias Float AbstractFloat
 
 #--------------------#
 # Type MeshTopologyX #
 #--------------------#
-type MeshTopologyX <: AbstractMeshTopologyX
+type MeshTopologyX{X} <: AbstractMeshTopology
     dimension :: Integer
     nodes :: Array{AbstractFloat, 2}
     connectivities :: Dict{Tuple{Int, Int}, Array{Int,2}}
+end
 
-    function MeshTopologyX{Tn<:AbstractFloat, Te<:Integer}(nodes::AbstractArray{Tn,2}, elems::AbstractArray{Te,2})
-        dim = size(nodes, 2)
-        connect = Dict((dim,0) => elems)
-        return new(dim, nodes, connect)
-    end
+function MeshTopologyX{X<:AbstractMeshTopology, Tn<:Float, Te<:Integer}(::Type{X},
+                                                                        nodes::AbstractArray{Tn,2},
+                                                                        elems::AbstractArray{Te,2})
+    dim = size(nodes, 2)
+    connect = Dict((dim,0) => elems)
+    mt = MeshTopologyX{X}(dim, nodes, connect)
+    updateConnectivity!(mt)
+    return mt
 end
 
 # Associated Methods
 # -------------------
-function getConnectivity(mt::AbstractMeshTopologyX, d::Integer, dd::Integer)
-    return mt.super.connectivities[(d,dd)]
+function setConnectivity(mt::AbstractMeshTopology, d::Integer, dd::Integer, connect::AbstractArray{Int, 2})
+    mt.connectivities[(d,dd)] = connect;
 end
 
-function setConnectivity(mt::AbstractMeshTopologyX, d::Integer, dd::Integer, connect::Array{Int, 2})
-    mt.super.connectivities[(d,dd)] = connect;
-end
-
-function getEntities(mt::AbstractMeshTopologyX, d::Integer)
+function getEntities{X<:AbstractMeshTopology}(mt::MeshTopologyX{X}, d::Integer)
     if d == 0
-        return mt.super.nodes
+        return mt.nodes
     else
-        return mt.super.connectivities[(d,0)]
+        return mt.connectivities[(d,0)]
     end
 end
 
-function getNumber(mt::AbstractMeshTopologyX, d::Integer)
-    return size(getEntities(mt, d), 1)
-end
-
-function getBoundary(mt::AbstractMeshTopologyX, f::Function=x->true)
-    e2F = mt.super.connectivities[(2,1)][:]
+function getBoundary{X<:AbstractMeshTopology}(mt::MeshTopologyX{X}, f::Function=x->true)
+    e2F = mt.connectivities[(2,1)][:]
     R = (sparse(e2F, Array{Int64}(ones(length(e2F))), Array{Int64}(ones(length(e2F)))).==1)[:];
     face = getEntities(mt, mt.dimension-1)
-    center = permutedims(sum(mt.super.nodes[face,:],2)/size(face,2), [1 3 2])
+    center = permutedims(sum(mt.nodes[face,:],2)/size(face,2), [1 3 2])
     R = R & f(center)
     return R
 end
 
-
-getNodes(mt::AbstractMeshTopologyX) = mt.super.nodes
-getDim(mt::AbstractMeshTopologyX) = mt.super.dimension
-
-#----------------------#
-# Type MeshTopologyTri #
-#----------------------#
-type MeshTopologyTri <: AbstractMeshTopologyX
-    super :: MeshTopologyX
-
-    function MeshTopologyTri{Tn<:AbstractFloat, Te<:Integer}(nodes::AbstractArray{Tn,2}, elems::AbstractArray{Te,2})
-        mt = new(MeshTopologyX(nodes, elems))
-        #updateConnectivity(mt)
-        return mt
-    end
+#------------------------#
+# Type MeshTopology{Tri} #
+#------------------------#
+type Tri <: AbstractMeshTopology
 end
+
+typealias MeshTopologyTri MeshTopologyX{Tri}
+MeshTopologyTri(nodes, cells) = MeshTopologyX(Tri, nodes, cells)
 
 # Associated Methods
 # -------------------
-function updateConnectivity(mt::MeshTopologyTri)
+function updateConnectivity!(mt::MeshTopologyX{Tri})
     D = getDim(mt)
     setConnectivity(mt, 0, 0, collect(1:getNumber(mt, 0))'');
     setConnectivity(mt, 1, 0, sort([getConnectivity(mt, 2, 0)[:,[1,2]];
@@ -95,11 +82,12 @@ function updateConnectivity(mt::MeshTopologyTri)
     setConnectivity(mt, 1, 0, I);
     setConnectivity(mt, 2, 1, reshape(J, getNumber(mt, 2), 3));
     for d = 0:D
-        setConnectivity(mt, d, d, [1:getNumber(mt, d);]);
+        nE = getNumber(mt, d)
+        setConnectivity(mt, d, d, reshape(1:nE, nE, 1));
     end
 end
 
-function getQuadRule(mt::MeshTopologyTri, order::Int, codim)
+function getQuadRule(mt::MeshTopologyX{Tri}, order::Int, codim)
   if codim == 0
     return QuadTriGauss6(order)
   elseif codim == 1
@@ -107,20 +95,16 @@ function getQuadRule(mt::MeshTopologyTri, order::Int, codim)
   end
 end
 
-#-----------------------#
-# Type MeshTopologyQuad #
-#-----------------------#
-type MeshTopologyQuad <: AbstractMeshTopologyX
-    super :: MeshTopologyX
-
-    function MeshTopologyQuad{Tn<:AbstractFloat, Te<:Integer}(nodes::AbstractArray{Tn,2}, elems::AbstractArray{Te,2})
-        mt = new(MeshTopologyX(nodes, elems))
-        updateConnectivity(mt)
-        return mt
-    end
+#-------------------------#
+# Type MeshTopology{Quad} #
+#-------------------------#
+type Quad <: AbstractMeshTopology
 end
 
-function updateConnectivity(mt::MeshTopologyQuad)
+typealias MeshTopologyQuad MeshTopologyX{Quad}
+MeshTopologyQuad(nodes, cells) = MeshTopologyX(Quad, nodes, cells)
+
+function updateConnectivity!(mt::MeshTopologyX{Quad})
     D = getDim(mt)
     setConnectivity(mt, 0, 0, [1:getNumber(mt, 0)]);
     setConnectivity(mt, 1, 0, sort([getConnectivity(mt, 2, 0)[:,[1,2]];
