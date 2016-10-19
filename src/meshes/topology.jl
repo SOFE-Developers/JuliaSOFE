@@ -48,7 +48,9 @@ end
 Return the vertex index connectivity array for the mesh
 entities of topological dimension `d`.
 """
-function getEntities(mt::AbstractMeshTopology, d::Integer) end
+function getEntities(mt::AbstractMeshTopology, d::Integer)
+    return getConnectivity(mt, d, 0)
+end
 
 """
 

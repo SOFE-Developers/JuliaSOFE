@@ -44,14 +44,6 @@ function setConnectivity(mt::AbstractMeshTopology, d::Integer, dd::Integer, conn
     mt.connectivities[(d,dd)] = connect;
 end
 
-function getEntities{X<:AbstractMeshTopology}(mt::MeshTopologyX{X}, d::Integer)
-    if d == 0
-        return mt.nodes
-    else
-        return mt.connectivities[(d,0)]
-    end
-end
-
 function getBoundary{X<:AbstractMeshTopology}(mt::MeshTopologyX{X}, f::Function=x->true)
     e2F = mt.connectivities[(2,1)][:]
     R = (sparse(e2F, Array{Int64}(ones(length(e2F))), Array{Int64}(ones(length(e2F)))).==1)[:];
@@ -74,7 +66,7 @@ MeshTopologyTri(nodes, cells) = MeshTopologyX(Tri, nodes, cells)
 # -------------------
 function updateConnectivity!(mt::MeshTopologyX{Tri})
     D = getDim(mt)
-    setConnectivity(mt, 0, 0, collect(1:getNumber(mt, 0))'');
+    setConnectivity(mt, 0, 0, collect(1:size(getNodes(mt),1))'');
     setConnectivity(mt, 1, 0, sort([getConnectivity(mt, 2, 0)[:,[1,2]];
                                     getConnectivity(mt, 2, 0)[:,[2,3]];
                                     getConnectivity(mt, 2, 0)[:,[1,3]]], 2));

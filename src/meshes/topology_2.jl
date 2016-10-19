@@ -58,7 +58,7 @@ Stores the topology of a mesh as a set of incidence relations.
 """
 type MeshTopologyGeneric <: AbstractMeshTopology
     dimension :: Integer
-    nodes :: AbstractArray{AbstractFloat, 2}
+    nodes :: Array{AbstractFloat, 2}
     connectivities :: Dict{Tuple{Int, Int}, MeshConnectivity}
 
     MeshTopologyGeneric{T<:AbstractFloat}(dim::Integer, nodes::AbstractArray{T,2},
@@ -105,7 +105,8 @@ Return the vertex index connectivity array for the mesh
 entities of topological dimension `d`.
 """
 function getEntities(mt::MeshTopologyGeneric, d::Integer)
-    return collect(getConnectivity(mt, d, 0))
+    # return collect(getConnectivity(mt, d, 0))
+    return hcat(getConnectivity(mt, d, 0)...)'
 end
 
 """
