@@ -6,16 +6,17 @@ export AbstractElement, Element, LagrangeP1
 
 abstract AbstractElement
 
+typealias Float AbstractFloat
+
 #--------------#
 # Type Element #
 #--------------#
-type Element{E<:AbstractElement}
-    type_ :: E
-    dimension :: Integer
+type Element{E<:AbstractElement, T<:Integer}
+    dimension :: T
 end
 
 function Element{E<:AbstractElement}(::Type{E}, dimension)
-    return Element{E}(E(), dimension)
+    return Element{E}(dimension)
 end
 
 # Associated Methods
@@ -35,7 +36,7 @@ function evalBasis(el::Element, points, deriv::Integer=0)
     end
 end
 
-function evalD0Basis{T<:Real}(el::Element, points::AbstractArray{T,2})
+function evalD0Basis{T<:Float}(el::Element, points::AbstractArray{T,2})
     nP, nD = size(points)
     nB = nbasis(el, nD)
 
@@ -47,7 +48,7 @@ function evalD0Basis{T<:Real}(el::Element, points::AbstractArray{T,2})
     return B
 end
 
-function evalD1Basis{T<:Real}(el::Element, points::AbstractArray{T,2})
+function evalD1Basis{T<:Float}(el::Element, points::AbstractArray{T,2})
     nP, nD = size(points)
     nB = nbasis(el, nD)
 
@@ -59,7 +60,7 @@ function evalD1Basis{T<:Real}(el::Element, points::AbstractArray{T,2})
     return B
 end
 
-function evalD2Basis{T<:Real}(el::Element, points::AbstractArray{T,2})
+function evalD2Basis{T<:Float}(el::Element, points::AbstractArray{T,2})
     nP, nD = size(points)
     nB = nbasis(el, nD)
 
@@ -81,16 +82,16 @@ order(::Element{LagrangeP1}) = 1
 nbasis(el::Element{LagrangeP1}) = tuple(2:(dimension(el)+1)...)
 nvertices(el::Element{LagrangeP1}) = tuple(2:(dimension(el)+1)...)
 
-evalD0Basis(el::Element{LagrangeP1}, x::Real) = [1 - x, x]
-evalD0Basis(el::Element{LagrangeP1}, x::Real, y::Real) = [1 - (x + y), x, y]    
-evalD0Basis(el::Element{LagrangeP1}, x::Real, y::Real, z::Real) = [1 - (x + y + z), x, y, z]    
+evalD0Basis(el::Element{LagrangeP1}, x::Float) = [1 - x, x]
+evalD0Basis(el::Element{LagrangeP1}, x::Float, y::Float) = [1 - (x + y), x, y]    
+evalD0Basis(el::Element{LagrangeP1}, x::Float, y::Float, z::Float) = [1 - (x + y + z), x, y, z]    
 
-evalD1Basis(el::Element{LagrangeP1}, x::Real) = [-1, 1]
-evalD1Basis(el::Element{LagrangeP1}, x::Real, y::Real) = [-1 -1; 1  0; 0 1]    
-evalD1Basis(el::Element{LagrangeP1}, x::Real, y::Real, z::Real) = [-1 -1 -1; 1 0 0; 0 1 0; 0 0 1]
+evalD1Basis(el::Element{LagrangeP1}, x::Float) = [-1, 1]
+evalD1Basis(el::Element{LagrangeP1}, x::Float, y::Float) = [-1 -1; 1  0; 0 1]    
+evalD1Basis(el::Element{LagrangeP1}, x::Float, y::Float, z::Float) = [-1 -1 -1; 1 0 0; 0 1 0; 0 0 1]
 
-evalD2Basis(el::Element{LagrangeP1}, x::Real) = zeros(nbasis(el,1), dimension(el), dimension(el))
-evalD2Basis(el::Element{LagrangeP1}, x::Real, y::Real) = zeros(nbasis(el,2), dimension(el), dimension(el))
-evalD2Basis(el::Element{LagrangeP1}, x::Real, y::Real, z::Real) = zeros(nbasis(el,3), dimension(el), dimension(el))
+evalD2Basis(el::Element{LagrangeP1}, x::Float) = zeros(nbasis(el,1), dimension(el), dimension(el))
+evalD2Basis(el::Element{LagrangeP1}, x::Float, y::Float) = zeros(nbasis(el,2), dimension(el), dimension(el))
+evalD2Basis(el::Element{LagrangeP1}, x::Float, y::Float, z::Float) = zeros(nbasis(el,3), dimension(el), dimension(el))
 
 end # of module Elements
