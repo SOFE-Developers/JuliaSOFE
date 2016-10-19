@@ -323,12 +323,13 @@ end
 
 """
 
-    vertex_sets(mt::MeshTopologyGeneric, d::Integer)
+    vertex_sets(mt::MeshTopologyGeneric, d::Integer, sorted::Bool=true)
 
 Compute for each cell the set of vertex sets 
 incident to the entities of topological dimension `d`.
+If `sorted == true` the indices will be sorted increasingly.
 """
-function vertex_sets(mt::MeshTopologyGeneric, d::Integer)
+function vertex_sets(mt::MeshTopologyGeneric, d::Integer, sorted::Bool=true)
     D = mt.dimension
     D_0 = getConnectivity(mt, D, 0)
 
@@ -338,7 +339,11 @@ function vertex_sets(mt::MeshTopologyGeneric, d::Integer)
     V = [Array{Array{Int,1},1}() for i in 1:ncells]
     for (i, D_0_i) in enumerate(D_0)
         for comb in combs
-            push!(V[i], [D_0_i[j] for j in comb])
+            if sorted
+                push!(V[i], sort([D_0_i[j] for j in comb]))
+            else
+                push!(V[i], [D_0_i[j] for j in comb])
+            end
         end
     end
 
