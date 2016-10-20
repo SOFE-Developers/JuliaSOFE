@@ -28,6 +28,17 @@ Element{E<:AbstractElement}(::Type{E}, dim::Integer) = Element{E}(dim)
 function nDoF{E<:PrElement}(el::Element{E})
     return map(*, dofTuple(el), binomial(dim(el)+1, k) for k = 1:dim(el)+1)
 end
+function nDoF{E<:QrElement}(el::Element{E})
+    if dim(el) == 1
+        return map(*, dofTuple(el), (2,1))
+    elseif dim(el) == 2
+        return map(*, dofTuple(el), (4,4,1))
+    elseif dim(el) == 3
+        return map(*, dofTuple(el), (8,12,6,1))
+    else
+        error("Invalid element dimension ", dim(el))
+    end
+end
 @inline nDoF(el::AbstractElement, d::Integer) = nDoF(el)[d]
 
 """
