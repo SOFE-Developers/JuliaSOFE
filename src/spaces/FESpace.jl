@@ -12,11 +12,14 @@ type FESpace{M<:AbstractMesh, E<:AbstractElement} <: AbstractFESpace
     mesh :: M
     element :: E
     freeDOF :: Array{Bool, 1}
+    shift :: Function
 end
 
-function FESpace{M<:AbstractMesh, E<:AbstractElement}(m::M, e::E, bfnc::Function=x->trues(size(x,1)))
+function FESpace{M<:AbstractMesh, E<:AbstractElement}(m::M, e::E,
+                                                      bfnc::Function=x->trues(size(x,1)),
+                                                      shift::Function=x->zeros(size(x,1)))
     freeDOF = !getBoundaryDOFs(m, bfnc)
-    return FESpace(m, e, freeDOF)
+    return FESpace(m, e, freeDOF, shift)
 end
 
 # Associated Methods
@@ -98,5 +101,21 @@ function dofMask(fes::FESpace, d::Integer)
     end
     return mask
 end
-    
+extractDoFs(fes::FESpace, d::Integer) = dofMask(fes, d)
+
+
+function interpolate(fes::FESpace, f::Function)
+    @assert isnodal(fes.element)
+
+    d = dim(fes.element)
+    p = order(fes.element)
+
+    v = getNodes(fes.mesh)
+    e = p > 1 ? evalReferenceMap(fes.mesh, linspace(0,1,p+1)[2:end-1]) : zeros(0,d)
+    i = (p > 2 && d > 1) ? evalReferenceMap(fes.mesh, lagrangeNodesP(d,p)[p*(d+1):,:]) : zeros(0,d)
+
+    n = vcat(v, e, i)
+
+    return f(n)
+end
 end # of module Spaces
