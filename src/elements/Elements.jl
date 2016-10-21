@@ -72,8 +72,8 @@ end
 # Type LagrangeP1 #
 #-----------------#
 type LagrangeP1 <: PrElement
+    LagrangeP1(dim::Integer) = Element(LagrangeP1, dim)
 end
-LagrangeP1(dim::Integer) = Element(LagrangeP1, dim)
 
 order(::Element{LagrangeP1}) = 1
 nBasis(el::Element{LagrangeP1}) = tuple(2:(dim(el)+1)...)
