@@ -43,20 +43,50 @@ end
 # Associated Methods
 # -------------------
 
-# Reference Maps
+"""
+
+    evalReferenceMaps{T<:Float}(m::Mesh, points::AbstractArray{T,2}, deriv::Integer=0)
+
+  Evaluate for each mesh element its associated reference map
+  at given local points on the reference domain.
+"""
 function evalReferenceMaps{T<:Float}(m::Mesh, points::AbstractArray{T,2}, deriv::Integer=0)
     nP, nD = size(points)
-
-    nodes = getNodes(m.topology)
+    
+    nodes = getNodes(m)
+    nW = size(nodes, 2)
+    
     basis = evalBasis(m.element, points, deriv)
-    nB = size(basis, 1); nDv = size(basis, 4)
+    nB = size(basis, 1)
+    nDv = size(basis, 4)
 
     connect = getEntities(m.topology, nD)
     nE = size(connect, 1)
 
-    R = reshape(nodes[connect[:],:]', obj.dim*nE, nB) *
-        reshape(basis, nB, nP*nDv); # (nW*nE)x(nP*[...])
-    R = permutedims(reshape(R, obj.dim, nE, nP, nDv), [2 3 1 4]); # nExnPxnWx[...];
+    if deriv == 0
+        R = zeros(nE, nP, nW)
+        for ie = 1:nE
+            for ip = 1:nP
+                R[ie, ip, :] = basis[:,ip]' * nodes[connect[ie,:],:]
+                # for ib = 1:nB
+                #     R[ie, ip, :] += nodes[connect[ie,ib],:] * basis[ib]
+                # end
+            end
+        end
+    elseif deriv == 1
+        R = zeros(nE, nP, nW, nD)
+        for ie = 1:nE
+            for ip = 1:nP
+                R[ie, ip, :, :] = basis[:,ip,:]' * nodes[connect[ie,:],:]
+            end
+        end
+    elseif deriv == 2
+        error("Not implemented yet!")
+    end
+
+    # R = reshape(nodes[connect[:],:]', obj.dim*nE, nB) *
+    #     reshape(basis, nB, nP*nDv); # (nW*nE)x(nP*[...])
+    # R = permutedims(reshape(R, obj.dim, nE, nP, nDv), [2 3 1 4]); # nExnPxnWx[...];
 
     return R
 end

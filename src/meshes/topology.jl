@@ -35,7 +35,7 @@ end
 
     getConnectivity(mt::AbstractMeshTopology, d::Integer, dd::Integer)
 
-Return the incidence relation `d -> dd` computing it first if necessary.
+  Return the incidence relation `d -> dd` computing it first if necessary.
 """
 function getConnectivity(mt::AbstractMeshTopology, d::Integer, dd::Integer)
     return mt.connectivities[(d,dd)]
