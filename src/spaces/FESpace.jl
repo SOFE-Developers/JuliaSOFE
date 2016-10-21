@@ -103,19 +103,20 @@ function dofMask(fes::FESpace, d::Integer)
 end
 extractDoFs(fes::FESpace, d::Integer) = dofMask(fes, d)
 
+function interpolate(m::Mesh, el::Element, f::Function)
+    @assert isnodal(el)
 
-function interpolate(fes::FESpace, f::Function)
-    @assert isnodal(fes.element)
+    d = dim(el)
+    p = order(el)
 
-    d = dim(fes.element)
-    p = order(fes.element)
-
-    v = getNodes(fes.mesh)
-    e = p > 1 ? evalReferenceMap(fes.mesh, linspace(0,1,p+1)[2:end-1]) : zeros(0,d)
-    i = (p > 2 && d > 1) ? evalReferenceMap(fes.mesh, lagrangeNodesP(d,p)[p*(d+1):,:]) : zeros(0,d)
+    v = getNodes(m)
+    e = p > 1 ? evalReferenceMap(m, linspace(0,1,p+1)[2:end-1]) : zeros(0,d)
+    i = (p > 2 && d > 1) ? evalReferenceMap(m, lagrangeNodesP(d,p)[p*(d+1):,:]) : zeros(0,d)
 
     n = vcat(v, e, i)
 
     return f(n)
 end
+interpolate(fes::FESpace, f::Function) = interpolate(fes.mesh, fes.element, f)
+
 end # of module Spaces
