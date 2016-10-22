@@ -65,14 +65,14 @@ function evalReferenceMaps{T<:Float}(m::Mesh, points::AbstractArray{T,2}, deriv:
     @assert nB == size(elems, 2)
 
     if deriv == 0
-        R = zeros(eltype(points), nE, nP, nW)
+        R = zeros(T, nE, nP, nW)
     elseif deriv == 1
-        R = zeros(eltype(points), nE, nP, nW, nD)
+        R = zeros(T, nE, nP, nW, nD)
     elseif deriv == 2
-        R = zeros(eltype(points), nE, nP, nW, nD, nD)
+        R = zeros(T, nE, nP, nW, nD, nD)
     end
 
-    @time fill_RefMaps!(R, nodes, elems, basis)
+    fill_RefMaps!(R, nodes, elems, basis)
 
     return R
 end
@@ -133,18 +133,8 @@ function evalJacobianInverse{T<:Float}(m::Mesh, points::AbstractArray{T,2})
     jacs = evalReferenceMaps(m, points, 1)
     nE, nP, nW, nD = size(jacs)
 
-    if nW == nD
-        for ip = 1:nP
-            for ie = 1:nE
-                jacs[ie,ip,:,:] = inv(jacs[ie,ip,:,:])
-            end
-        end
-    elseif nD == 1
-        for ip = 1:nP
-            for ie = 1:nE
-                jacs[ie,ip,:,:] = 1./jacs[ie,ip,:,:]
-            end
-        end
+    if (nW == nD) || (nD == 1)
+        fill_JacsInv!(jacs)
     else
         error("Invalid shape of jacobians! (", nW, nD, ")")
     end
@@ -153,7 +143,7 @@ function evalJacobianInverse{T<:Float}(m::Mesh, points::AbstractArray{T,2})
 end
 
 function fill_JacsInv!{T<:Float}(jacs::Array{T,4})
-    issquare = (nW == nD)
+    issquare = (size(jacs,3) == size(jacs,4))
     for ip = 1:size(jacs,2) # nP
         for ie = 1:size(jacs,1) # nE
             jacs[ie,ip,:,:] = issquare ? inv(jacs[ie,ip,:,:]) : 1./jacs[ie,ip,:,:]
@@ -172,60 +162,65 @@ function evalJacobianDeterminat{T<:Float}(m::Mesh, points::AbstractArray{T,2})
     jacs = evalReferenceMaps(m, points, 1)
     nE, nP, nW, nD = size(jacs)
 
-    det_jacs = zeros(eltype(jacs), nE, nP)
-    if nW == nD
-        for ip = 1:nP
-            for ie = 1:nE
-                det_jacs[ie,ip] = det(jacs[ie,ip,:,:])
-            end
-        end
-    elseif nW == 2 && nD == 1
-        for ip = 1:nP
-            for ie = 1:nE
-                det_jacs[ie,ip] = norm(jacs[ie,ip,:])
-            end
-        end
-    elseif nW == 3 && nD == 2
-        for ip = 1:nP
-            for ie = 1:nE
-                t1 = (jacs[ie,ip,2,1] * jacs[ie,ip,3,2] - jacs[ie,ip,3,1] * jacs[ie,ip,2,2])^2
-                t2 = (jacs[ie,ip,3,1] * jacs[ie,ip,1,2] - jacs[ie,ip,1,1] * jacs[ie,ip,3,2])^2
-                t3 = (jacs[ie,ip,1,1] * jacs[ie,ip,2,2] - jacs[ie,ip,2,1] * jacs[ie,ip,1,2])^2
-                det_jacs[ie,ip] = sqrt(t1 + t2 + t3)
-            end
-        end
-    else
-        error("Invalid shape of jacobians! (", nW, nD, ")")
-    end
+    D = zeros(eltype(jacs), nE, nP)
+    fill_JacsDet!(D, jacs, Val{nW}, Val{nD})
 
-    return det_jacs
+    return D
 end
 
-function evalTrafo{T<:Float}(m::Mesh, dPhi::AbstractArray{T,4})
-    (nW, nD) = size(dPhi, 3, 4);
-    if nW == 2
-        if nD == 1
-            R = sqrt(dPhi[:,:,1].^2 + dPhi[:,:,2].^2);
-        elseif nD == 2
-            R = dPhi[:,:,1,1].*dPhi[:,:,2,2] - dPhi[:,:,1,2].*dPhi[:,:,2,1];
-        end
-    elseif nW == 3
-        if nD == 1
-            R = sqrt(dPhi[:,:,1].^2 + dPhi[:,:,2].^2 + dPhi[:,:,3].^2);
-        elseif nD == 2
-            R = sqrt((dPhi[:,:,2,1].*dPhi[:,:,3,2] - dPhi[:,:,3,1].*dPhi[:,:,2,2]).^2 +
-                     (dPhi[:,:,3,1].*dPhi[:,:,1,2] - dPhi[:,:,1,1].*dPhi[:,:,3,2]).^2 +
-                     (dPhi[:,:,1,1].*dPhi[:,:,2,2] - dPhi[:,:,2,1].*dPhi[:,:,1,2]).^2);
-        elseif nD == 3
-            dPhi = dPhi[:,:,1,1].*dPhi[:,:,2,2].*dPhi[:,:,3,3] +
-                dPhi[:,:,1,2].*dPhi[:,:,2,3].*dPhi[:,:,3,1] +
-                dPhi[:,:,1,3].*dPhi[:,:,2,1].*dPhi[:,:,3,2] -
-                dPhi[:,:,1,1].*dPhi[:,:,2,3].*dPhi[:,:,3,2] -
-                dPhi[:,:,1,2].*dPhi[:,:,2,1].*dPhi[:,:,3,3] -
-                dPhi[:,:,1,3].*dPhi[:,:,2,2].*dPhi[:,:,3,1];
+function fill_JacsDet!{T<:Float}(D::Array{T,2}, jacs::Array{T,4}, ::Type{Val{2}}, ::Type{Val{1}})
+    for ip = 1:size(D,2) # nP
+        for ie = 1:size(D,1) # nE
+            D[ie,ip] = sqrt(jacs[ie,ip,1,1]^2 + jacs[ie,ip,2,1]^2)
         end
     end
-    return R
+end
+
+function fill_JacsDet!{T<:Float}(D::Array{T,2}, jacs::Array{T,4}, ::Type{Val{3}}, ::Type{Val{1}})
+    for ip = 1:size(D,2) # nP
+        for ie = 1:size(D,1) # nE
+            D[ie,ip] = sqrt(jacs[ie,ip,1,1]^2 + jacs[ie,ip,2,1]^2 + jacs[ie,ip,3,1]^2)
+        end
+    end
+end
+
+function fill_JacsDet!{T<:Float}(D::Array{T,2}, jacs::Array{T,4}, ::Type{Val{2}}, ::Type{Val{2}})
+    for ip = 1:size(D,2) # nP
+        for ie = 1:size(D,1) # nE
+            D[ie,ip] = jacs[ie,ip,1,1] * jacs[ie,ip,2,2] - jacs[ie,ip,2,1] * jacs[ie,ip,1,2]
+        end
+    end
+end
+
+function fill_JacsDet!{T<:Float}(D::Array{T,2}, jacs::Array{T,4}, ::Type{Val{3}}, ::Type{Val{2}})
+    for ip = 1:size(D,2) # nP
+        for ie = 1:size(D,1) # nE
+            D[ie,ip] = sqrt((jacs[ie,ip,2,1] * jacs[ie,ip,3,2] - jacs[ie,ip,3,1] * jacs[ie,ip,2,2])^2
+                            + (jacs[ie,ip,3,1] * jacs[ie,ip,1,2] - jacs[ie,ip,1,1] * jacs[ie,ip,3,2])^2
+                            + (jacs[ie,ip,1,1] * jacs[ie,ip,2,2] - jacs[ie,ip,2,1] * jacs[ie,ip,1,2])^2)
+        end
+    end
+end
+
+function fill_JacsDet!{T<:Float}(D::Array{T,2}, jacs::Array{T,4}, ::Type{Val{3}}, ::Type{Val{3}})
+    for ip = 1:size(D,2) # nP
+        for ie = 1:size(D,1) # nE
+            D[ie,ip] = jacs[ie,ip,1,1] * jacs[ie,ip,2,2] * jacs[ie,ip,3,3] +
+                jacs[ie,ip,1,2] * jacs[ie,ip,2,3] * jacs[ie,ip,3,1] +
+                jacs[ie,ip,1,3] * jacs[ie,ip,2,1] * jacs[ie,ip,3,2] -
+                jacs[ie,ip,1,1] * jacs[ie,ip,2,3] * jacs[ie,ip,3,2] -
+                jacs[ie,ip,1,2] * jacs[ie,ip,2,1] * jacs[ie,ip,3,3] -
+                jacs[ie,ip,1,3] * jacs[ie,ip,2,2] * jacs[ie,ip,3,1]
+        end
+    end
+end
+
+# for compatibility
+function evalTrafo{T<:Float}(m::Mesh, dPhi::AbstractArray{T,4})
+    nE, nP, nW, nD = size(dPhi)
+    D = zeros(T, nE, nP)
+    fill_JacsDet!(D, dPhi, Val{nW}, Val{nD})
+    return D
 end
 
 function evalTrafoPair{T<:Float}(m::Mesh, points::AbstractArray{T,2})

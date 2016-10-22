@@ -57,13 +57,13 @@ function evalBasis{T<:AbstractFloat}(el::Element,
 
     if deriv == 0
         B = zeros(T, nB, nP)
-        return evalD0Basis!(el, points, B) # nB x nP x 1
+        return evalD0Basis!(el, points, B) # nB x nP
     elseif deriv == 1
         B = zeros(T, nB, nP, nD)
-        return evalD1Basis!(el, points, B) # nB x nP x 1 x nD
+        return evalD1Basis!(el, points, B) # nB x nP x nD
     elseif deriv == 2
         B = zeros(T, nB, nP, nD, nD)
-        return evalD2Basis!(el, points, B) # nB x nP x 1 x nD x nD
+        return evalD2Basis!(el, points, B) # nB x nP x nD x nD
     else
         error("Invalid derivation order! ($deriv)")
     end
