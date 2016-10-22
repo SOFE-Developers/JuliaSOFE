@@ -51,8 +51,7 @@ end
   Evaluate for each mesh element its associated reference map
   at given local points on the reference domain.
 """
-#function evalReferenceMaps{T<:Float}(m::Mesh, points::AbstractArray{T,2}, deriv::Integer=0)
-function evalReferenceMaps(m::Mesh, points::AbstractArray{Float64,2}, deriv::Int=0)
+function evalReferenceMaps{T<:Float}(m::Mesh, points::AbstractArray{T,2}, deriv::Integer=0)
     nP, nD = size(points)
 
     nodes = getNodes(m.topology)
@@ -61,101 +60,62 @@ function evalReferenceMaps(m::Mesh, points::AbstractArray{Float64,2}, deriv::Int
     basis = evalBasis(m.element, points, deriv)
     nB = size(basis, 1)
 
-    @time connect = getEntities(m.topology, nD)
-    nE = size(connect, 1)
-    @assert nB == size(connect, 2)
+    elems = getEntities(m.topology, nD)
+    nE = size(elems, 1)
+    @assert nB == size(elems, 2)
 
-    if eltype(nodes) != eltype(basis) != eltype(points)
-        warn("eltype(nodes) $eltype(nodes)  != eltype(basis) $eltype(basis) != eltype(points) $eltype(points)")
-    end
-    
     if deriv == 0
         R = zeros(eltype(points), nE, nP, nW)
-        
-        for iw = 1:nW
-            for ip = 1:nP
-                for ie = 1:nE
-                    for ib = 1:nB
-                        R[ie,ip,iw] += nodes[connect[ie,ib],iw] * basis[ib,ip]
-                        #R[ie,ip,iw] += coords[ie,ib,iw] * basis[ib,ip]
-                    end
-                end
-            end
-        end
-
-        # for ip = 1:nP
-        #     for ie = 1:nE
-        #         R[ie, ip, :] = basis[:,ip]' * nodes[connect[ie,:],:]
-        #     end
-        # end
-
-        # for iw = 1:nW
-        #     for ip = 1:nP
-        #         for ie = 1:nE
-        #             R[ie, ip, iw] = sum(nodes[connect[ie,ib],iw] * basis[ib] for ib = 1:nB)
-        #         end
-        #     end
-        # end
     elseif deriv == 1
         R = zeros(eltype(points), nE, nP, nW, nD)
-
-        @time for id = 1:nD
-            for iw = 1:nW
-                for ip = 1:nP
-                    for ie = 1:nE
-                        for ib = 1:nB
-                            q = R[ie,ip,iw,id]
-                            #R[ie,ip,iw,id] += 1
-                            #R[ie,ip,iw,id] += nodes[connect[ie,ib],iw] * basis[ib,ip,id]
-                        end
-                    end
-                end
-            end
-        end
-
-        # for ip = 1:nP
-        #     for ie = 1:nE
-        #         R[ie, ip, :, :] = basis[:,ip,:]' * nodes[connect[ie,:],:]
-        #     end
-        # end
-
-        # for id = 1:nD
-        #     for iw = 1:nW
-        #         for ip = 1:nP
-        #             for ie = 1:nE
-        #                 R[ie, ip, iw, id] = sum(nodes[connect[ie,k],iw] * basis[k,id] for k = 1:nB)
-        #             end
-        #         end
-        #     end
-        # end
     elseif deriv == 2
         R = zeros(eltype(points), nE, nP, nW, nD, nD)
-        for jd = 1:nD
-            for id = 1:nD
-                for iw = 1:nW
-                    for ip = 1:nP
-                        # R[ie,ip,iw,id,jd] = sum(nodes[connect[ie,ib],iw] * basis[ib,id,jd] for ib = 1:nB)
-                        for ie = 1:nE
-                            for ib = 1:nB
-                                R[ie,ip,iw,id,jd] += nodes[connect[ie,ib],iw] * basis[ib,ip,id,jd]
-                            end
-                        end
-                    end
-                end
-            end
-        end
     end
+
+    @time fill_RefMaps!(R, nodes, elems, basis)
 
     return R
 end
 
-function fill_D0RefMap!{T<:Float}(R::Array{T,3}, nodes::Array{T,2},
-                                  elems::Array{Int,2}, basis::Array{T,2})
+function fill_RefMaps!{T<:Float}(R::Array{T,3}, nodes::Array{T,2},
+                                 elems::Array{Int,2}, basis::Array{T,2})
     for iw = 1:size(R,3) # nW
         for ip = 1:size(R,2) # nP
             for ie = 1:size(R,1) # nE
                 for ib = 1:size(basis,1) # nB
                     R[ie,ip,iw] += nodes[elems[ie,ib],iw] * basis[ib,ip]
+                end
+            end
+        end
+    end
+end
+
+function fill_RefMaps!{T<:Float}(R::Array{T,4}, nodes::Array{T,2},
+                                 elems::Array{Int,2}, basis::Array{T,3})
+    for id = 1:size(R,4) # nD
+        for iw = 1:size(R,3) # nW
+            for ip = 1:size(R,2) # nP
+                for ie = 1:size(R,1) # nE
+                    for ib = 1:size(basis,1) # nB
+                        R[ie,ip,iw,id] += nodes[elems[ie,ib],iw] * basis[ib,ip,id]
+                    end
+                end
+            end
+        end
+    end
+end
+
+function fill_RefMaps!{T<:Float}(R::Array{T,5}, nodes::Array{T,2},
+                                 elems::Array{Int,2}, basis::Array{T,4})
+    for jd = 1:size(R,5) # nD
+        for id = 1:size(R,4) # nD
+            for iw = 1:size(R,3) # nW
+                for ip = 1:size(R,2) # nP
+                    for ie = 1:size(R,1) # nE
+                        for ib = 1:size(basis,1) # nB
+                            R[ie,ip,iw,id,jd] += nodes[elems[ie,ib],iw] * basis[ib,ip,id,jd]
+                        end
+                    end
                 end
             end
         end
@@ -190,6 +150,15 @@ function evalJacobianInverse{T<:Float}(m::Mesh, points::AbstractArray{T,2})
     end
 
     return jacs
+end
+
+function fill_JacsInv!{T<:Float}(jacs::Array{T,4})
+    issquare = (nW == nD)
+    for ip = 1:size(jacs,2) # nP
+        for ie = 1:size(jacs,1) # nE
+            jacs[ie,ip,:,:] = issquare ? inv(jacs[ie,ip,:,:]) : 1./jacs[ie,ip,:,:]
+        end
+    end
 end
 
 """
