@@ -2,7 +2,8 @@ __precompile__()
 
 module Elements
 
-export AbstractElement, LagrangeP1, LagrangeQ1
+export AbstractElement, Element, LagrangeP1, LagrangeQ1
+export dim, order, nBasis, nVertices, dofTuple, nDoF, evalBasis
 
 abstract AbstractElement
 abstract PrElement <: AbstractElement
@@ -55,14 +56,14 @@ function evalBasis{T<:AbstractFloat}(el::Element,
     nB = nBasis(el, nD)
 
     if deriv == 0
-        B = zeros(T, nB, nP, 1)
-        return evalD0Basis!(el, points, B) # nB x nP x 1
+        B = zeros(T, nB, nP)
+        return evalD0Basis!(el, points, B) # nB x nP
     elseif deriv == 1
-        B = zeros(T, nB, nP, 1, nD)
-        return evalD1Basis!(el, points, B) # nB x nP x 1 x nD
+        B = zeros(T, nB, nP, nD)
+        return evalD1Basis!(el, points, B) # nB x nP x nD
     elseif deriv == 2
-        B = zeros(T, nB, nP, 1, nD, nD)
-        return evalD2Basis!(el, points, B) # nB x nP x 1 x nD x nD
+        B = zeros(T, nB, nP, nD, nD)
+        return evalD2Basis!(el, points, B) # nB x nP x nD x nD
     else
         error("Invalid derivation order! ($deriv)")
     end
@@ -81,21 +82,21 @@ dofTuple(el::Element{LagrangeP1}) = (1, 0, 0, 0)[1:dim(el)+1]
 
 # Associated Methods
 # -------------------
-function evalD0Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,3})
+function evalD0Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,2})
     out[1,:]     = 1 - sum(points, 2)
     out[2:end,:] = points'
     return out
 end
 
-function evalD1Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,4})
-    out[1,:,:,:] = -1
+function evalD1Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,3})
+    out[1,:,:] = -1
     for k = 1:size(out, 1)-1
-        out[k+1,:,:,k] = 1
+        out[k+1,:,k] = 1
     end
     return out
 end
 
-function evalD2Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,5})
+function evalD2Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,4})
     out[:] = 0
     return out
 end
