@@ -22,10 +22,10 @@ typealias Float AbstractFloat
 #--------------------#
 # Type MeshTopologyX #
 #--------------------#
-type MeshTopologyX{X} <: AbstractMeshTopology
-    dimension :: Integer
-    nodes :: Array{AbstractFloat, 2}
-    connectivities :: Dict{Tuple{Int, Int}, Array{Int,2}}
+type MeshTopologyX{X, Tn<:Float, Te<:Integer} <: AbstractMeshTopology
+    dimension :: Int
+    nodes :: Array{Tn, 2}
+    connectivities :: Dict{Tuple{Int, Int}, Array{Te,2}}
 end
 
 function MeshTopologyX{X<:AbstractMeshTopology, Tn<:Float, Te<:Integer}(::Type{X},
@@ -33,7 +33,7 @@ function MeshTopologyX{X<:AbstractMeshTopology, Tn<:Float, Te<:Integer}(::Type{X
                                                                         elems::AbstractArray{Te,2})
     dim = size(nodes, 2)
     connect = Dict((dim,0) => elems)
-    mt = MeshTopologyX{X}(dim, nodes, connect)
+    mt = MeshTopologyX{X,Tn,Te}(dim, nodes, connect)
     updateConnectivity!(mt)
     return mt
 end

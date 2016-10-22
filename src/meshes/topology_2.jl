@@ -56,9 +56,9 @@ Base.length(mc::MeshConnectivity) = size(mc, 1)
 """
 Stores the topology of a mesh as a set of incidence relations.
 """
-type MeshTopologyGeneric <: AbstractMeshTopology
-    dimension :: Integer
-    nodes :: Array{AbstractFloat, 2}
+type MeshTopologyGeneric{T<:AbstractFloat} <: AbstractMeshTopology
+    dimension :: Int
+    nodes :: Array{T, 2}
     connectivities :: Dict{Tuple{Int, Int}, MeshConnectivity}
 
     MeshTopologyGeneric{T<:AbstractFloat}(dim::Integer, nodes::AbstractArray{T,2},
