@@ -5,6 +5,7 @@ module Operators
 using ..Elements
 using ..Meshes
 using ..Spaces
+using ..Quadrature
 
 export AbstractOperator, Operator, IdId, GradGrad, Id
 export coeff, space, matrix, assemble!
@@ -22,13 +23,20 @@ type Operator{O<:AbstractOperator} <: AbstractOperator
     fes :: FESpace
     coeff :: Function
     matrix :: AbstractArray
+    quadrule :: QuadRule
 end
 function Operator{O<:AbstractOperator}(::Type{O}, fes::FESpace, coeff::Function)
-    return Operator{O}(fes, coeff, [])
+    if issubtype(type_(fes.element), PElement)
+        qrule = QuadRuleSimp1()
+    else
+        error("Currently only simplical elements supported...")
+    end
+
+    return Operator{O}(fes, coeff, [], qrule)
 end
 function Operator{O<:AbstractOperator, T<:Real}(::Type{O}, fes::FESpace, coeff::T)
-    return Operator{O}(fes,
-                       x->convert(coeff, typeof(x)) * ones(typeof(x), size(x,1)), [])
+    return Operator(O, fes,
+                    x->convert(coeff, typeof(x)) * ones(typeof(x), size(x,1)))
 end
 
 # Associated Methods
@@ -52,16 +60,18 @@ end
 
 function assemble!(op::Operator{IdId}, d::Integer)
     fes = space(op)
-    qpoints, qweights = quadData(fes, d)
-    C = evalFunction(fes.mesh, coeff(fes), qpoints)
+    qpoints, qweights = quadData(op.quadrule, d)
+    #C = evalFunction(fes.mesh, coeff(fes), qpoints)
     dMap = dofMap(fes, d)
-    ndof = nDoF(fes)
+    ndof = Spaces.nDoF(fes)
     jdet = evalJacobianDeterminat(fes.mesh, points)
     basis = evalBasis(fes.element, points, 0)
 
     nB, nE = size(dMap)
     nP, nD = size(qpoints)
 
+    C = ones(nE,nP)
+    
     entries = zeros(eltype(qpoints), nE, nB, nB)
     dofI = zeros(Int, nE, nB, nB)
     dofJ = zeros(Int, nE, nB, nB)

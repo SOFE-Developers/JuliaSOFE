@@ -2,8 +2,10 @@ module Spaces
 
 using ..Elements
 using ..Meshes
+using ..Quadrature
 
 export AbstractFESpace, FESpace
+export dofMap, nDoF, dofIndices, dofMask, extractDoFs, interpolate
 
 abstract AbstractFESpace
 
@@ -17,12 +19,13 @@ type FESpace{M<:AbstractMesh, E<:AbstractElement} <: AbstractFESpace
     shift :: Function
 end
 
-function FESpace{M<:AbstractMesh, E<:AbstractElement}(m::M, e::E,
+function FESpace{M<:AbstractMesh, E<:AbstractElement}(m::M, el::E,
                                                       bfnc::Function=x->trues(size(x,1)),
                                                       shift::Function=x->zeros(size(x,1)))
     #freeDOF = !getBoundaryDOFs(m, bfnc)
     freeDOF = []
-    return FESpace{M,E}(m, e, freeDOF, shift)
+
+    return FESpace{M,E}(m, el, freeDOF, shift)
 end
 
 # Associated Methods
@@ -40,8 +43,8 @@ end
   function on the `j`-th element.
 """
 function dofMap(fes::FESpace, d::Integer)
-    dofTuple = fes.element.dofTUple
-    dofPerDim = fes.element.dofPerDim
+    dofTuple = Elements.dofTuple(fes.element)
+    dofPerDim = Elements.nDoF(fes.element)
     nEntities = [getNumber(fes.mesh.topology, dd) for dd = 0:d]
     dofsNeeded = [nEntities[dd+1] * dofTuple[dd+1] for dd = 0:d]
     ndofs = [0, cumsum(dofsNeeded)...]
@@ -51,10 +54,10 @@ function dofMap(fes::FESpace, d::Integer)
     # first iterate over subdims
     for dd = 0:d-1
         for (i, d_dd_i) in enumerate(getConnectivity(fes.mesh.topology, d, dd))
-            println(d_dd_i)
+            println(dd, " ", i, " ", d_dd_i)
             for (j, d_dd_ij) in enumerate(d_dd_i)
                 r = (j-1)*dofTuple[dd+1]+1 : j*dofTuple[dd+1]
-                dofMap[dd+1][r,i] = dofs[dd+1][:,j]
+                dofMap[dd+1][r,j] = dofs[dd+1][:,i]
             end
         end
     end
@@ -104,7 +107,7 @@ function dofMask(fes::FESpace, d::Integer)
     end
     return mask
 end
-extractDoFs(fes::FESpace, d::Integer) = dofMask(fes, d)
+extractDoF(fes::FESpace, d::Integer) = dofMask(fes, d)
 
 function interpolate(m::Mesh, el::Element, f::Function)
     @assert isnodal(el)

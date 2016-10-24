@@ -2,8 +2,8 @@ __precompile__()
 
 module Elements
 
-export AbstractElement, Element, LagrangeP1, LagrangeQ1
-export dimension, order, nBasis, nVertices, dofTuple, nDoF, evalBasis
+export AbstractElement, Element, PElement, QElement, LagrangeP1, LagrangeQ1
+export dimension, type_, order, nBasis, nVertices, dofTuple, nDoF, evalBasis
 
 abstract AbstractElement
 abstract PElement <: AbstractElement
@@ -16,8 +16,9 @@ typealias Float AbstractFloat
 #--------------#
 type Element{E<:AbstractElement} <: AbstractElement
     dimension :: Int
+    type_ :: Type
 end
-Element{E<:AbstractElement}(::Type{E}, dim::Integer) = Element{E}(dim)
+Element{E<:AbstractElement}(::Type{E}, dim::Integer) = Element{E}(dim, E)
 
 # Associated methods
 # -------------------
@@ -28,6 +29,8 @@ Element{E<:AbstractElement}(::Type{E}, dim::Integer) = Element{E}(dim)
   The topological dimension of the element.
 """
 @inline dimension(el::Element) = el.dimension
+
+@inline type_(el::Element) = el.type_
 
 """
 
@@ -55,21 +58,21 @@ end
   entities of the element.
 """
 @inline nVertices(el::AbstractElement, d::Integer) = nVertices(el)[d]
-@inline nVertices{E<:PElement}(el::Element{E}) = tuple(2:(dim(el)+1)...)
-@inline nVertices{E<:QElement}(el::Element{E}) = tuple(2.^(1:dim(el))...)
+@inline nVertices{E<:PElement}(el::Element{E}) = tuple(2:(dimension(el)+1)...)
+@inline nVertices{E<:QElement}(el::Element{E}) = tuple(2.^(1:dimension(el))...)
 
 function nDoF{E<:PElement}(el::Element{E})
-    return map(*, dofTuple(el), binomial(dim(el)+1, k) for k = 1:dim(el)+1)
+    return map(*, dofTuple(el), binomial(dimension(el)+1, k) for k = 1:dimension(el)+1)
 end
 function nDoF{E<:QElement}(el::Element{E})
-    if dim(el) == 1
+    if dimension(el) == 1
         return map(*, dofTuple(el), (2,1))
-    elseif dim(el) == 2
+    elseif dimension(el) == 2
         return map(*, dofTuple(el), (4,4,1))
-    elseif dim(el) == 3
+    elseif dimension(el) == 3
         return map(*, dofTuple(el), (8,12,6,1))
     else
-        error("Invalid element dimension ", dim(el))
+        error("Invalid element dimension ", dimension(el))
     end
 end
 @inline nDoF(el::AbstractElement, d::Integer) = nDoF(el)[d]
@@ -110,7 +113,7 @@ end
 
 order(::Element{LagrangeP1}) = 1
 nBasis(el::Element{LagrangeP1}) = tuple(2:(dim(el)+1)...)
-dofTuple(el::Element{LagrangeP1}) = (1, 0, 0, 0)[1:dim(el)+1]
+dofTuple(el::Element{LagrangeP1}) = (1, 0, 0, 0)[1:dimension(el)+1]
 
 # Associated Methods
 # -------------------

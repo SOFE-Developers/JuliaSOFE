@@ -9,6 +9,7 @@ using ..Elements
 
 include("topology.jl")
 using .Topology
+export getConnectivity, getEntities, getNumber
 
 #--------------------#
 # Abstract Mesh Type #
