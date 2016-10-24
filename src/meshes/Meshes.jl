@@ -2,13 +2,14 @@ __precompile__()
 
 module Meshes
 
-export Mesh, TensorProductMesh, UnitSquare, UnitCube
+export AbstractMesh, Mesh, TensorProductMesh, UnitSquare, UnitCube
 export evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
 
 using ..Elements
 
 include("topology.jl")
 using .Topology
+export getNodes, getConnectivity, getEntities, getNumber
 
 #--------------------#
 # Abstract Mesh Type #
@@ -22,7 +23,7 @@ typealias Float AbstractFloat
 #-----------#
 type Mesh <: AbstractMesh
     dimension :: Integer
-    element
+    element :: Element
     topology :: AbstractMeshTopology
 
     function Mesh{T<:Float, S<:Integer}(nodes::AbstractArray{T,2},
@@ -43,6 +44,21 @@ end
 
 # Associated Methods
 # -------------------
+"""
+
+    dimension(m::Mesh)
+
+  Return the spatial dimension of the mesh (nodes).
+"""
+@inline dimension(m::Mesh) = m.dimension
+
+"""
+
+    topology(m::Mesh)
+
+  Return the topology of the mesh.
+"""
+@inline topology(m::Mesh) = m.topology
 
 # Reference Maps
 include("refmaps.jl")

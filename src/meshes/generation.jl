@@ -1,38 +1,14 @@
-#--------------------------------------------------------------------------------#
-# Taken from 'https://github.com/JuliaLang/julia/blob/master/examples/ndgrid.jl'
-function ndgrid_fill(a, v, s, snext)
-    for j = 1:length(a)
-        a[j] = v[div(rem(j-1, snext), s)+1]
-    end
-end
-
-function ndgrid{T}(vs::AbstractVector{T}...)
-    n = length(vs)
-    sz = map(length, vs)
-    out = ntuple(i->Array{T}(sz), n)
-    s = 1
-    for i=1:n
-        a = out[i]::Array
-        v = vs[i]
-        snext = s*size(a,i)
-        ndgrid_fill(a, v, s, snext)
-        s = snext
-    end
-    out
-end
-#--------------------------------------------------------------------------------#
+using ..Helpers
 
 """
 
     TensorProductMesh{T<:AbstractFloat}(grids::AbstractArray{T,1}...)
 
-Create a mesh where the nodes are generated from the tensor product
-of the given grid points.
+  Create a mesh where the nodes are generated from the tensor product
+  of the given grid points.
 """
 function TensorProductMesh{T<:AbstractFloat}(grids::AbstractArray{T,1}...)
-    ngrid = ndgrid(grids...)
-    nodes = cat(2, [g[:] for g in ngrid]...)
-
+    nodes = tensorprod(grids...)
     nnodes, dim = size(nodes)
 
     if dim == 1
@@ -101,8 +77,8 @@ end
 
     UnitSquare(nx::Integer, ny::Integer)
 
-Create a mesh discretizing the unit square [0,1]² using
-`nx` nodes on the x-axis and `ny` nodes on the y-axis.
+  Create a mesh discretizing the unit square [0,1]² using
+  `nx` nodes on the x-axis and `ny` nodes on the y-axis.
 """
 UnitSquare(nx::Integer, ny::Integer) = TensorProductMesh(linspace(0,1,nx),
                                                          linspace(0,1,ny))
@@ -112,9 +88,9 @@ UnitSquare(n::Integer) = UnitSquare(n,n)
 
     UnitCube(nx::Integer, ny::Integer, nz::Integer)
 
-Create a mesh discretizing the unit cube [0,1]³ using
-`nx` nodes on the x-axis, `ny` nodes on the y-axis
-and `nz` nodes on the z-axis.
+  Create a mesh discretizing the unit cube [0,1]³ using
+  `nx` nodes on the x-axis, `ny` nodes on the y-axis
+  and `nz` nodes on the z-axis.
 """
 UnitCube(nx::Integer, ny::Integer, nz::Integer) = TensorProductMesh(linspace(0,1,nx),
                                                                     linspace(0,1,ny),

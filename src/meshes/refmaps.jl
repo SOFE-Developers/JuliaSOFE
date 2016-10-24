@@ -80,8 +80,8 @@ end
 
     evalJacobianInverse{T<:Float}(m::Mesh, points::AbstractArray{T,2})
 
-Compute the inverse of the jacobian of each reference map 
-evaluated in every given local point.
+  Compute the inverse of the jacobian of each reference map 
+  evaluated in every given local point.
 """
 function evalJacobianInverse{T<:Float}(m::Mesh, points::AbstractArray{T,2})
     jacs = evalReferenceMaps(m, points, 1)
@@ -109,8 +109,8 @@ end
 
     evalJacobianInverse{T<:Float}(m::Mesh, points::AbstractArray{T,2})
 
-Compute the determinant of the jacobian of each reference map 
-evaluated in every given local point.
+  Compute the determinant of the jacobian of each reference map 
+  evaluated in every given local point.
 """
 function evalJacobianDeterminat{T<:Float}(m::Mesh, points::AbstractArray{T,2})
     jacs = evalReferenceMaps(m, points, 1)
