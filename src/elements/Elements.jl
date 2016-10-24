@@ -108,11 +108,11 @@ end
 # Type LagrangeP1 #
 #-----------------#
 type LagrangeP1 <: PElement
-    LagrangeP1(dim::Integer) = Element(LagrangeP1, dim)
 end
+LagrangeP1(dim::Integer) = Element(LagrangeP1, dim)
 
 order(::Element{LagrangeP1}) = 1
-nBasis(el::Element{LagrangeP1}) = tuple(2:(dim(el)+1)...)
+nBasis(el::Element{LagrangeP1}) = tuple(2:(dimension(el)+1)...)
 dofTuple(el::Element{LagrangeP1}) = (1, 0, 0, 0)[1:dimension(el)+1]
 
 # Associated Methods
@@ -140,12 +140,12 @@ end
 # Type LagrangeQ1 #
 #-----------------#
 type LagrangeQ1 <: QElement
-    LagrangeQ1(dim::Integer) = Element(LagrangeQ1, dim)
 end
+LagrangeQ1(dim::Integer) = Element(LagrangeQ1, dim)
 
 order(::Element{LagrangeQ1}) = 1
-nBasis(el::Element{LagrangeQ1}) = tuple(2.^(1:dim(el))...)
-dofTuple(el::Element{LagrangeQ1}) = (1, 0, 0, 0)[1:dim(el)+1]
+nBasis(el::Element{LagrangeQ1}) = tuple(2.^(1:dimension(el))...)
+dofTuple(el::Element{LagrangeQ1}) = (1, 0, 0, 0)[1:dimension(el)+1]
 
 # Associated Methods
 # -------------------
