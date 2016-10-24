@@ -214,7 +214,6 @@ function build!(mt::MeshTopologyGeneric, d::Integer)
                 if j < i
                     for vi in V[i]
                         if vi in V[j]
-                            # l = find([v == vi for v in ind_d_0])[1]
                             l = indexin([vi], ind_d_0)[1]
                             push!(ind_D_d[i], l)
                         else

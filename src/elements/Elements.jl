@@ -30,6 +30,12 @@ Element{E<:AbstractElement}(::Type{E}, dim::Integer) = Element{E}(dim, E)
 """
 @inline dimension(el::Element) = el.dimension
 
+"""
+
+    type_(el::Element)
+
+  Return the concrete child type of the element.
+"""
 @inline type_(el::Element) = el.type_
 
 """
@@ -118,21 +124,25 @@ dofTuple(el::Element{LagrangeP1}) = (1, 0, 0, 0)[1:dimension(el)+1]
 # Associated Methods
 # -------------------
 function evalD0Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,2})
-    out[1,:]     = 1 - sum(points, 2)
-    out[2:end,:] = points'
+    for ip = 1:size(points, 1)
+        for id = 1:size(points, 2)
+            out[1,ip] -= points[ip,id]
+            out[id+1,ip] = points[ip,id]
+        end
+    end
     return out
 end
 
 function evalD1Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,3})
-    out[1,:,:] = -1
+    out[1,:,:] = -one(T)
     for k = 1:size(out, 1)-1
-        out[k+1,:,k] = 1
+        out[k+1,:,k] = one(T)
     end
     return out
 end
 
 function evalD2Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,4})
-    out[:] = 0
+    out[:] = zero(T)
     return out
 end
 
