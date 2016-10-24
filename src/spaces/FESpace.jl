@@ -31,13 +31,13 @@ end
 
     dofMap(fes::FESpace, d::Integer)
 
-Returns the degrees of freedom mapping that connects the global mesh
-entities of topological dimension `d` to the local reference element.
+  Return the degrees of freedom mapping that connects the global mesh
+  entities of topological dimension `d` to the local reference element.
 
-Establishes the connection between the local and global degrees of freedom
-via the connectivity array `C` where `C[i,j] = k` connects the `i`-th
-global basis function on the `j`-th element to the `k`-th local basis 
-function on the reference element.
+  Establishes the connection between the local and global degrees of freedom
+  via a connectivity array `C` where `C[i,j] = k` connects the `i`-th
+  local basis function  on the reference element to the `k`-th global basis 
+  function on the `j`-th element.
 """
 function dofMap(fes::FESpace, d::Integer)
     dofTuple = fes.element.dofTUple
@@ -69,8 +69,8 @@ end
 
     nDoF(fes::FESpace)
 
-Return the total number of degrees of freedom for the
-finite element space `fes`.
+  Return the total number of degrees of freedom for the
+  finite element space `fes`.
 """
 function nDoF(fes::FESpace)
     return maxabs(getDOFMap(fes, fes.mesh.dimension))
@@ -80,9 +80,9 @@ end
 
     dofIndices(fes::FESpace, d::Integer)
 
-Return the indices of the degrees of freedom for the finite
-element space `fes` associated with the mesh entities of 
-topological dimension `d`.
+  Return the indices of the degrees of freedom for the finite
+  element space `fes` associated with the mesh entities of 
+  topological dimension `d`.
 """
 function dofIndices(fes::FESpace, d::Integer)
     dofMap = dofMap(fes, d)
@@ -93,9 +93,9 @@ end
 
     dofMask(fes::FESpace, d::Integer)
 
-Return a boolean mask specifying the degrees of freedom
-for the finite element space `fes` associated with the 
-mesh entities of topological dimension `d`.
+  Return a boolean mask specifying the degrees of freedom
+  for the finite element space `fes` associated with the 
+  mesh entities of topological dimension `d`.
 """
 function dofMask(fes::FESpace, d::Integer)
     mask = zeros(Bool, nDoF(fes))

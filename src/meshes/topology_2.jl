@@ -4,8 +4,8 @@ import Combinatorics: combinations
 # Type MeshConnectivity #
 #-----------------------#
 """
-Stores the incidence relation 'd -> dd' for a fixed pair
-of topological dimensions '(d,dd)'.
+  Stores the incidence relation 'd -> dd' for a fixed pair
+  of topological dimensions '(d,dd)'.
 """
 type MeshConnectivity
     dims :: Tuple{Int, Int}
@@ -54,7 +54,7 @@ Base.length(mc::MeshConnectivity) = size(mc, 1)
 # Type MeshTopologyGeneric #
 #--------------------------#
 """
-Stores the topology of a mesh as a set of incidence relations.
+  Stores the topology of a mesh as a set of incidence relations.
 """
 type MeshTopologyGeneric{T<:AbstractFloat} <: AbstractMeshTopology
     dimension :: Int
@@ -86,24 +86,11 @@ function Base.show(io::IO, mt::MeshTopologyGeneric)
             ["\n\t\t$connect" for connect in mt.connectivities]...)
 end
 
-"""
-
-    getConnectivity(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
-
-Return the incidence relation `d -> dd` computing it first if necessary.
-"""
 function getConnectivity(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     haskey(mt.connectivities, (d,dd)) || connectivity!(mt, d, dd)
     return mt.connectivities[(d,dd)]
 end
 
-"""
-
-    getEntities(mt::MeshTopologyGeneric, d::Integer)
-
-Return the vertex index connectivity array for the mesh
-entities of topological dimension `d`.
-"""
 function getEntities(mt::MeshTopologyGeneric, d::Integer)
     # return collect(getConnectivity(mt, d, 0))
     return hcat(getConnectivity(mt, d, 0)...)'
@@ -113,7 +100,7 @@ end
 
     getBoundary(mt::MeshTopologyGeneric, d::Integer)
 
-Determine the boundary entities of topological dimension `d`.
+  Determine the boundary entities of topological dimension `d`.
 """
 function getBoundary(mt::MeshTopologyGeneric, d::Integer)
     D = getDim(mt) # mt.dimension
@@ -140,9 +127,9 @@ end
 
     init!{T<:Integer}(mt::MeshTopologyGeneric, cells::AbstractArray{T,2})
 
-Compute the incidence relations `D -> 0`, `0 -> D` and `D -> D` 
-from the given cell connectivity array where `D` is the dimension
-of the topology.
+  Compute the incidence relations `D -> 0`, `0 -> D` and `D -> D` 
+  from the given cell connectivity array where `D` is the dimension
+  of the topology.
 """
 function init!{T<:Integer}(mt::MeshTopologyGeneric, cells::AbstractArray{T,2})
     D = mt.dimension
@@ -164,8 +151,8 @@ end
 
     connectivity!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
 
-Compute the incidence relation `d -> dd` by successive application
-of `build`, `transpose` and `intersection`.
+  Compute the incidence relation `d -> dd` by successive application
+  of `build`, `transpose` and `intersection`.
 """
 function connectivity!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     d  != 0 && (haskey(mt.connectivities, (d, 0)) || build!(mt, d))
@@ -192,9 +179,9 @@ end
 
     build!(mt::MeshTopologyGeneric, d::Integer)
 
-Compute the incidence relation `D -> d` and `d -> 0`
-from `D -> 0` and `D -> D` for `0 < d < D` where `D`
-is the dimension of the topology.
+  Compute the incidence relation `D -> d` and `d -> 0`
+  from `D -> 0` and `D -> D` for `0 < d < D` where `D`
+  is the dimension of the topology.
 """
 function build!(mt::MeshTopologyGeneric, d::Integer)
     D = mt.dimension
@@ -253,8 +240,8 @@ end
 
     transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
 
-Compute the incidence relation `dd -> d` from `d -> dd`
-for `d > dd`.
+  Compute the incidence relation `dd -> d` from `d -> dd`
+  for `d > dd`.
 """
 function transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     @assert d > dd
@@ -282,8 +269,8 @@ end
 
     intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
 
-Compute the incidence relation `d -> dd` from
-`d -> ddd` and `ddd -> dd` for `d >= dd`.
+  Compute the incidence relation `d -> dd` from
+  `d -> ddd` and `ddd -> dd` for `d >= dd`.
 """
 function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
     @assert d >= d
@@ -325,9 +312,10 @@ end
 
     vertex_sets(mt::MeshTopologyGeneric, d::Integer, sorted::Bool=true)
 
-Compute for each cell the set of vertex sets 
-incident to the entities of topological dimension `d`.
-If `sorted == true` the indices will be sorted increasingly.
+  Compute for each cell the set of vertex sets 
+  incident to the entities of topological dimension `d`.
+  If `sorted` is `true` (default) the indices will be sorted 
+  in increasing order.
 """
 function vertex_sets(mt::MeshTopologyGeneric, d::Integer, sorted::Bool=true)
     D = mt.dimension

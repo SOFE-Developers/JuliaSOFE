@@ -1,6 +1,6 @@
 module Topology
 
-export AbstractMeshTopology#, MeshTopologyTri, MeshTopologyQuad, MeshTopologyGeneric
+export AbstractMeshTopology
 export MeshTopology, getDim, getNodes, getConnectivity, getEntities, getNumber
 
 #-----------------------------#
@@ -12,24 +12,22 @@ abstract AbstractMeshTopology
 # -------------------
 """
 
-    getDim(mt::AbstractMeshTopology)
+    dimension(mt::AbstractMeshTopology)
 
-Return the spatial dimension of the mesh topology,
-i.e. he topological dimension of the cells.
+  Return the spatial dimension of the mesh topology,
+  i.e. the topological dimension of the cells.
 """
-function getDim(mt::AbstractMeshTopology)
-    return mt.dimension
-end
+@inline dimension(mt::AbstractMeshTopology) = mt.dimension
+@inline getDim(mt::AbstractMeshTopology) = dimension(mt)
 
 """
 
-    getNodes(mt::AbstractMeshTopology)
+    nodes(mt::AbstractMeshTopology)
 
-Return the coordinates of the mesh vertices.
+  Return the coordinates of the mesh vertices.
 """
-function getNodes(mt::AbstractMeshTopology)
-    return mt.nodes
-end
+@inline nodes(mt::AbstractMeshTopology) = mt.nodes
+@inline getNodes(mt::AbstractMeshTopology) = nodes(mt)
 
 """
 
@@ -45,8 +43,8 @@ end
 
     getEntities(mt::AbstractMeshTopology, d::Integer)
 
-Return the vertex index connectivity array for the mesh
-entities of topological dimension `d`.
+  Return the vertex index connectivity array for the mesh
+  entities of topological dimension `d`.
 """
 function getEntities(mt::AbstractMeshTopology, d::Integer)
     return getConnectivity(mt, d, 0)
@@ -56,7 +54,7 @@ end
 
     getNumber(mt::AbstractMeshTopology, d::Integer)
 
-Return the number of `d`-dimensional mesh entities.
+  Return the number of `d`-dimensional mesh entities.
 """
 function getNumber(mt::AbstractMeshTopology, d::Integer)
     return size(getEntities(mt, d), 1)
@@ -66,7 +64,7 @@ end
 
     getBoundary(mt::AbstractMeshTopology)
 
-Determine the boundary facets.
+  Determine the boundary facets.
 """
 function getBoundary(mt::AbstractMeshTopology) end
 function getBoundary(mt::AbstractMeshTopology, f::Function) end
@@ -85,7 +83,7 @@ else
 end
 
 """
-Return a mesh topology instance of appropriate type. 
+  Return a mesh topology instance of appropriate type. 
 """
 function MeshTopology(nodes, cells)
     if USE_X

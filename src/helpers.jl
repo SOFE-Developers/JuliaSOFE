@@ -1,3 +1,7 @@
+module Helpers
+
+export tensorprod, lagrangeNodesP
+
 function tensorprod{T}(gridx::AbstractArray{T,1}, gridy::AbstractArray{T,1})
     return hcat([i for i in gridx for j in gridy],
                 [j for i in gridx for j in gridy])
@@ -59,3 +63,5 @@ function lagrangeNodesP(d::Integer, p::Integer)
         end
     end
 end
+
+end # of module Helpers

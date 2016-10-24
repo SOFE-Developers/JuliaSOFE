@@ -43,6 +43,21 @@ end
 
 # Associated Methods
 # -------------------
+"""
+
+    dimension(m::Mesh)
+
+  Return the spatial dimension of the mesh (nodes).
+"""
+@inline dimension(m::Mesh) = m.dimension
+
+"""
+
+    topology(m::Mesh)
+
+  Return the topology of the mesh.
+"""
+@inline topology(m::Mesh) = m.topology
 
 # Reference Maps
 include("refmaps.jl")

@@ -3,11 +3,11 @@ __precompile__()
 module Elements
 
 export AbstractElement, Element, LagrangeP1, LagrangeQ1
-export dim, order, nBasis, nVertices, dofTuple, nDoF, evalBasis
+export dimension, order, nBasis, nVertices, dofTuple, nDoF, evalBasis
 
 abstract AbstractElement
-abstract PrElement <: AbstractElement
-abstract QrElement <: AbstractElement
+abstract PElement <: AbstractElement
+abstract QElement <: AbstractElement
 
 typealias Float AbstractFloat
 
@@ -21,15 +21,47 @@ Element{E<:AbstractElement}(::Type{E}, dim::Integer) = Element{E}(dim)
 
 # Associated methods
 # -------------------
-@inline dim(el::Element) = el.dimension
+"""
+
+    dimension(el::Element)
+
+  The topological dimension of the element.
+"""
+@inline dimension(el::Element) = el.dimension
+
+"""
+
+    order(el::Element)
+
+  The polynomial order of the element's basis (shape) functions.
+"""
+function order(el::Element)
+end
+
+"""
+
+    nBasis(el::Element, [d::Integer])
+
+  The number of basis (shape) functions associated with the 
+  `d`-dimensional entities of the element.
+"""
 @inline nBasis(el::Element, d::Integer) = nBasis(el)[d]
-@inline nVertices{E<:PrElement}(el::Element{E}) = tuple(2:(dim(el)+1)...)
-@inline nVertices{E<:QrElement}(el::Element{E}) = tuple(2.^(1:dim(el))...)
+
+"""
+
+    nVertices(el::Element, [d::Integer])
+
+  The number of vertices that define the `d`-dimensional
+  entities of the element.
+"""
 @inline nVertices(el::AbstractElement, d::Integer) = nVertices(el)[d]
-function nDoF{E<:PrElement}(el::Element{E})
+@inline nVertices{E<:PElement}(el::Element{E}) = tuple(2:(dim(el)+1)...)
+@inline nVertices{E<:QElement}(el::Element{E}) = tuple(2.^(1:dim(el))...)
+
+function nDoF{E<:PElement}(el::Element{E})
     return map(*, dofTuple(el), binomial(dim(el)+1, k) for k = 1:dim(el)+1)
 end
-function nDoF{E<:QrElement}(el::Element{E})
+function nDoF{E<:QElement}(el::Element{E})
     if dim(el) == 1
         return map(*, dofTuple(el), (2,1))
     elseif dim(el) == 2
@@ -46,8 +78,8 @@ end
 
     evalBasis{T<:AbstractFloat}(el::Element, points::AbstractArray{T,1}, deriv::Integer=0)
 
-Evaluate the element's shape (basis) functions at given `points`
-on the reference domain.
+  Evaluate the element's shape (basis) functions at given `points`
+  on the reference domain.
 """
 function evalBasis{T<:AbstractFloat}(el::Element,
                                      points::AbstractArray{T,2},
@@ -72,7 +104,7 @@ end
 #-----------------#
 # Type LagrangeP1 #
 #-----------------#
-type LagrangeP1 <: PrElement
+type LagrangeP1 <: PElement
     LagrangeP1(dim::Integer) = Element(LagrangeP1, dim)
 end
 
@@ -104,9 +136,9 @@ end
 #-----------------#
 # Type LagrangeQ1 #
 #-----------------#
-type LagrangeQ1 <: QrElement
+type LagrangeQ1 <: QElement
+    LagrangeQ1(dim::Integer) = Element(LagrangeQ1, dim)
 end
-LagrangeQ1(dim::Integer) = Element(LagrangeQ1, dim)
 
 order(::Element{LagrangeQ1}) = 1
 nBasis(el::Element{LagrangeQ1}) = tuple(2.^(1:dim(el))...)
