@@ -3,6 +3,8 @@ module Spaces
 using ..Elements
 using ..Meshes
 
+export AbstractFESpace, FESpace
+
 abstract AbstractFESpace
 
 #--------------#
@@ -18,8 +20,9 @@ end
 function FESpace{M<:AbstractMesh, E<:AbstractElement}(m::M, e::E,
                                                       bfnc::Function=x->trues(size(x,1)),
                                                       shift::Function=x->zeros(size(x,1)))
-    freeDOF = !getBoundaryDOFs(m, bfnc)
-    return FESpace(m, e, freeDOF, shift)
+    #freeDOF = !getBoundaryDOFs(m, bfnc)
+    freeDOF = []
+    return FESpace{M,E}(m, e, freeDOF, shift)
 end
 
 # Associated Methods
@@ -111,7 +114,7 @@ function interpolate(m::Mesh, el::Element, f::Function)
 
     v = getNodes(m)
     e = p > 1 ? evalReferenceMap(m, linspace(0,1,p+1)[2:end-1]) : zeros(0,d)
-    i = (p > 2 && d > 1) ? evalReferenceMap(m, lagrangeNodesP(d,p)[p*(d+1):,:]) : zeros(0,d)
+    #i = (p > 2 && d > 1) ? evalReferenceMap(m, lagrangeNodesP(d,p)[p*(d+1):,:]) : zeros(0,d)
 
     n = vcat(v, e, i)
 

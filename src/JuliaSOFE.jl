@@ -7,6 +7,8 @@ include(joinpath(dirname(@__FILE__), "helpers.jl"))
 include(joinpath(dirname(@__FILE__), "elements", "Elements.jl"))
 include(joinpath(dirname(@__FILE__), "meshes", "Meshes.jl"))
 include(joinpath(dirname(@__FILE__), "quadrature", "QuadRule.jl"))
+include(joinpath(dirname(@__FILE__), "spaces", "FESpace.jl"))
+include(joinpath(dirname(@__FILE__), "operators", "Operators.jl"))
 
 end # of module JuliaSOFE
 
