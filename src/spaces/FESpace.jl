@@ -1,9 +1,11 @@
+__precompile__()
+
 module Spaces
 
 using ..Elements
 using ..Meshes
 
-import ..Elements: nDof
+import ..Elements: nDoF
 
 export AbstractFESpace, FESpace
 export dofMap, nDoF, dofIndices, dofMask, extractDoFs, interpolate
@@ -45,26 +47,31 @@ end
 """
 function dofMap(fes::FESpace, d::Integer)
     dofTuple = dofTuple(fes.element)
-    dofPerDim = Elements.nDoF(fes.element)
+    dofPerDim = nDoF(fes.element)
     nEntities = [getNumber(fes.mesh.topology, dd) for dd = 0:d]
     dofsNeeded = [nEntities[dd+1] * dofTuple[dd+1] for dd = 0:d]
     ndofs = [0, cumsum(dofsNeeded)...]
     dofs = [reshape(ndofs[i]+1:ndofs[i+1], dofTuple[i], nEntities[i]) for i = 1:d+1]
 
     dofMap = [zeros(Int, dofPerDim[i], nEntities[d+1]) for i = 1:d+1]
-    # first iterate over subdims
-    for dd = 0:d-1
-        for (i, d_dd_i) in enumerate(getConnectivity(fes.mesh.topology, d, dd))
-            println(dd, " ", i, " ", d_dd_i)
-            for (j, d_dd_ij) in enumerate(d_dd_i)
-                r = (j-1)*dofTuple[dd+1]+1 : j*dofTuple[dd+1]
-                dofMap[dd+1][r,j] = dofs[dd+1][:,i]
+
+    if Meshes.Topology.USE_X
+        error()
+    else
+        # first iterate over subdims
+        for dd = 0:d-1
+            for (i, d_dd_i) in enumerate(getConnectivity(fes.mesh.topology, d, dd))
+                println(dd, " ", i, " ", d_dd_i)
+                for (j, d_dd_ij) in enumerate(d_dd_i)
+                    r = (j-1)*dofTuple[dd+1]+1 : j*dofTuple[dd+1]
+                    dofMap[dd+1][r,i] = dofs[dd+1][:,d_dd_ij]
+                end
             end
         end
+        
+        # set dofs of query dim
+        dofMap[d+1] = dofs[d+1]
     end
-
-    # set dofs of query dim
-    dofMap[d+1] = dofs[d+1]
 
     return vcat(dofMap...)
 end

@@ -53,23 +53,22 @@ Base.length(mc::MeshConnectivity) = size(mc, 1)
 #--------------------------#
 # Type MeshTopologyGeneric #
 #--------------------------#
-"""
-  Stores the topology of a mesh as a set of incidence relations.
-"""
+# """
+#   Stores the topology of a mesh as a set of incidence relations.
+# """
 type MeshTopologyGeneric{T<:AbstractFloat} <: AbstractMeshTopology
     dimension :: Int
     nodes :: Array{T, 2}
     connectivities :: Dict{Tuple{Int, Int}, MeshConnectivity}
-
-    MeshTopologyGeneric{T<:AbstractFloat}(dim::Integer, nodes::AbstractArray{T,2},
-                                          connect::Dict{Tuple{Int,Int}, MeshConnectivity}) =
-        new(dim, nodes, connect)
 end
 
 # Outer Constructors
 # -------------------
-MeshTopologyGeneric{T<:AbstractFloat}(dim::Integer, nodes::AbstractArray{T,2}) =
-    MeshTopologyGeneric(dim, nodes, Dict{Tuple{Int,Int}, MeshConnectivity}())
+function MeshTopologyGeneric{T<:AbstractFloat}(dim::Integer, nodes::AbstractArray{T,2})
+    connect = Dict{Tuple{Int,Int}, MeshConnectivity}()
+    return MeshTopologyGeneric(dim, nodes, connect)
+end
+
 function MeshTopologyGeneric{T<:AbstractFloat,S<:Integer}(dim::Integer, nodes::AbstractArray{T,2},
                                                           cells::AbstractArray{S,2})
     mt = MeshTopologyGeneric(dim, nodes)
@@ -92,8 +91,11 @@ function getConnectivity(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
 end
 
 function getEntities(mt::MeshTopologyGeneric, d::Integer)
-    # return collect(getConnectivity(mt, d, 0))
-    return hcat(getConnectivity(mt, d, 0)...)'
+    if d == 0
+        return collect(getConnectivity(mt, d, 0))
+    else
+        return hcat(getConnectivity(mt, d, 0)...)'
+    end
 end
 
 """
