@@ -9,7 +9,7 @@ using ..Elements
 
 include("topology.jl")
 using .Topology
-export getConnectivity, getEntities, getNumber
+export getNodes, getConnectivity, getEntities, getNumber
 
 #--------------------#
 # Abstract Mesh Type #
@@ -23,7 +23,7 @@ typealias Float AbstractFloat
 #-----------#
 type Mesh <: AbstractMesh
     dimension :: Integer
-    element
+    element :: Element
     topology :: AbstractMeshTopology
 
     function Mesh{T<:Float, S<:Integer}(nodes::AbstractArray{T,2},

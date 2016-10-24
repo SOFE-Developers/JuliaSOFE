@@ -2,7 +2,8 @@ module Spaces
 
 using ..Elements
 using ..Meshes
-using ..Quadrature
+
+import ..Elements: nDof
 
 export AbstractFESpace, FESpace
 export dofMap, nDoF, dofIndices, dofMask, extractDoFs, interpolate
@@ -43,7 +44,7 @@ end
   function on the `j`-th element.
 """
 function dofMap(fes::FESpace, d::Integer)
-    dofTuple = Elements.dofTuple(fes.element)
+    dofTuple = dofTuple(fes.element)
     dofPerDim = Elements.nDoF(fes.element)
     nEntities = [getNumber(fes.mesh.topology, dd) for dd = 0:d]
     dofsNeeded = [nEntities[dd+1] * dofTuple[dd+1] for dd = 0:d]
