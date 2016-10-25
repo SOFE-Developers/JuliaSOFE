@@ -84,6 +84,24 @@ function Base.getindex(mc::MeshConnectivity, i::Integer, j::Integer)
     return mc.indices[r1+j-1]
 end
 
+function Base.getindex{T<:Integer}(mc::MeshConnectivity{T}, I::AbstractVector, J::AbstractVector)
+    m = size(mc, 1)
+    nI = length(I)
+    nJ = length(J)
+    C = Array{T}(nI, nJ)
+
+    for (ic, i) in enumerate(I)
+        (1 <= i <= m) || throw(BoundsError(mc.offsets[1:end-1], i))
+        r1 = Int(mc.offsets[i]-1)
+        r2 = Int(mc.offsets[i+1]-1)
+        for (jc, j) in enumerate(J)
+            (1 <= j <= r2-r1) || throw(BoundsError(mc.indices[r1+1:r2], j))
+            C[ic,jc] = mc.indices[r1+j]
+        end
+    end
+    
+    return C
+end
 
 
 # provide an iteration interface for `MeshConnectivity` instances.
