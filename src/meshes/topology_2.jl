@@ -1,56 +1,6 @@
 import Combinatorics: combinations
 
-#-----------------------#
-# Type MeshConnectivity #
-#-----------------------#
-"""
-  Stores the incidence relation 'd -> dd' for a fixed pair
-  of topological dimensions '(d,dd)'.
-"""
-type MeshConnectivity
-    dims :: Tuple{Int, Int}
-    indices :: Array{Int, 1}
-    offsets :: Array{Int, 1}
-
-    MeshConnectivity{T<:Integer}(dims::Tuple{Integer,Integer}, ind::Array{T,1}, off::Array{T,1}) =
-        new(Tuple{Int,Int}(dims), Array{Int,1}(ind), Array{Int,1}(off))
-end
-
-# Outer Constructors
-# -------------------
-MeshConnectivity(dims::Tuple{Integer,Integer}) = MeshConnectivity(dims, Array{Integer,1}(), Array{Integer,1}())
-MeshConnectivity(d1::Integer, d2::Integer) = MeshConnectivity((d1,d2))
-MeshConnectivity{T<:Integer}(d1::Integer, d2::Integer, ind::Array{T,1}, off::Array{T,1}) =
-    MeshConnectivity((d1,d2), ind, off)
-
-# Associated Methods
-# -------------------
-@inline function Base.size(mc::MeshConnectivity)
-    nentities_d  = max(0, length(mc.offsets) - 1)
-    nentities_dd = length(mc.indices) > 0 ? maximum(mc.indices) : 0
-    return (nentities_d, nentities_dd)
-end
-@inline Base.size(mc::MeshConnectivity, d::Integer) = size(mc)[d]
-
-function Base.show(io::IO, mc::MeshConnectivity)
-    print(io, "MeshConnectivity: ", mc.dims[1], " -> ", mc.dims[2])
-end
-
-# provide an iteration interface for `MeshConnectivity` instances.
-Base.start(::MeshConnectivity) = 1
-
-function Base.next(mc::MeshConnectivity, state::Integer)
-    #return (mc.indices[mc.offsets[state]:mc.offsets[state+1]-1], state+1)
-    return (view(mc.indices, mc.offsets[state]:mc.offsets[state+1]-1), state+1)
-end
-
-Base.done(mc::MeshConnectivity, state::Integer) = state > length(mc)
-Base.eltype(::Type{MeshConnectivity}) = Array{Int,1}
-Base.length(mc::MeshConnectivity) = size(mc, 1)
-
-#Base.getindex(mc::MeshConnectivity, i::Integer) = mc.indices[mc.offsets[i]:mc.offsets[i+1]-1]
-Base.getindex(mc::MeshConnectivity, i::Integer) = view(mc.indices, mc.offsets[i]:mc.offsets[i+1]-1)
-Base.endof(mc::MeshConnectivity) = length(mc)
+include("connectivity.jl")
 
 #--------------------------#
 # Type MeshTopologyGeneric #
@@ -145,12 +95,12 @@ function init!{T<:Integer}(mt::MeshTopologyGeneric, cells::AbstractArray{T,2})
 
     mt.connectivities[(D,0)] = MeshConnectivity(D, 0, ind_D_0, off_D_0)
 
-    println("Time transpose! in init!")
-    @time transpose!(mt, D, 0)       # compute '0 -> D' by transposing 'D -> 0'
-    println("Time intersection! in init!")
-    @time intersection!(mt, D, D, 0) # and 'D -> D' by intersecting 'D -> 0' and '0 -> D'
+    # println("Time transpose! in init!")
+    # @time transpose!(mt, D, 0)       # compute '0 -> D' by transposing 'D -> 0'
+    # println("Time intersection! in init!")
+    # @time intersection!(mt, D, D, 0) # and 'D -> D' by intersecting 'D -> 0' and '0 -> D'
 
-    return
+    return nothing
 end
 
 """
