@@ -33,22 +33,24 @@ end
 @inline Base.size(mc::MeshConnectivity, d::Integer) = size(mc)[d]
 
 function Base.show(io::IO, mc::MeshConnectivity)
-    println(io, "MeshConnectivity: ", mc.dims[1], " -> ", mc.dims[2])
+    print(io, "MeshConnectivity: ", mc.dims[1], " -> ", mc.dims[2])
 end
 
 # provide an iteration interface for `MeshConnectivity` instances.
 Base.start(::MeshConnectivity) = 1
 
 function Base.next(mc::MeshConnectivity, state::Integer)
-    i, j = mc.offsets[state:state+1]
-    c = view(mc.indices, i:j-1)
-    # c = mc.indices[i:j-1]
-    return (c, state+1)
+    #return (mc.indices[mc.offsets[state]:mc.offsets[state+1]-1], state+1)
+    return (view(mc.indices, mc.offsets[state]:mc.offsets[state+1]-1), state+1)
 end
 
 Base.done(mc::MeshConnectivity, state::Integer) = state > length(mc)
 Base.eltype(::Type{MeshConnectivity}) = Array{Int,1}
 Base.length(mc::MeshConnectivity) = size(mc, 1)
+
+#Base.getindex(mc::MeshConnectivity, i::Integer) = mc.indices[mc.offsets[i]:mc.offsets[i+1]-1]
+Base.getindex(mc::MeshConnectivity, i::Integer) = view(mc.indices, mc.offsets[i]:mc.offsets[i+1]-1)
+Base.endof(mc::MeshConnectivity) = length(mc)
 
 #--------------------------#
 # Type MeshTopologyGeneric #
@@ -86,7 +88,7 @@ function Base.show(io::IO, mt::MeshTopologyGeneric)
 end
 
 function getConnectivity(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
-    haskey(mt.connectivities, (d,dd)) || connectivity!(mt, d, dd)
+    haskey(mt.connectivities, (d,dd)) || @time connectivity!(mt, d, dd)
     return mt.connectivities[(d,dd)]
 end
 
@@ -143,8 +145,10 @@ function init!{T<:Integer}(mt::MeshTopologyGeneric, cells::AbstractArray{T,2})
 
     mt.connectivities[(D,0)] = MeshConnectivity(D, 0, ind_D_0, off_D_0)
 
-    transpose!(mt, D, 0)       # compute '0 -> D' by transposing 'D -> 0'
-    intersection!(mt, D, D, 0) # and 'D -> D' by intersecting 'D -> 0' and '0 -> D'
+    println("Time transpose! in init!")
+    @time transpose!(mt, D, 0)       # compute '0 -> D' by transposing 'D -> 0'
+    println("Time intersection! in init!")
+    @time intersection!(mt, D, D, 0) # and 'D -> D' by intersecting 'D -> 0' and '0 -> D'
 
     return
 end
@@ -244,26 +248,73 @@ end
   Compute the incidence relation `dd -> d` from `d -> dd`
   for `d > dd`.
 """
+# function transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+#     @assert d > dd
+#     # get connectivity d -> dd
+#     connect_d_dd = getConnectivity(mt, d, dd)
+
+#     # initialize indices vector for new connectivity 'dd -> d'
+#     nentities_dd = maximum(connect_d_dd.indices)
+#     ind_dd_d = [Array{Int,1}() for i = 1:nentities_dd]
+
+#     # fill indices vector
+#     for (j, d_dd_j) in enumerate(connect_d_dd)
+#         for i in d_dd_j
+#             push!(ind_dd_d[i], j)
+#         end
+#     end
+
+#     # compute offsets
+#     off = vcat(1, 1 + Array{Int,1}(cumsum([length(i) for i in ind_dd_d])))
+
+#     mt.connectivities[(dd,d)] = MeshConnectivity(dd, d, vcat(ind_dd_d...), off)
+# end
+
 function transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     @assert d > dd
     # get connectivity d -> dd
     connect_d_dd = getConnectivity(mt, d, dd)
 
-    # initialize indices vector for new connectivity 'dd -> d'
+    # initialize offsets vectors for new connectivity 'dd -> d'
     nentities_dd = maximum(connect_d_dd.indices)
-    ind_dd_d = [Array{Int,1}() for i = 1:nentities_dd]
+    off_dd_d = ones(Int, nentities_dd+1)
 
+    # fill offsets vector
+    # (and compute number of connections 'dd -> d')
+    nconnect_dd_d = fill_offsets!(off_dd_d, connect_d_dd)
+    
+    # initialize indices vector for new connectivity 'dd -> d'
+    len_dd_d = zeros(Int, nentities_dd)
+    ind_dd_d = zeros(Int, nconnect_dd_d)
+    
     # fill indices vector
-    for (j, d_dd_j) in enumerate(connect_d_dd)
-        for i in d_dd_j
-            push!(ind_dd_d[i], j)
+    fill_transpose!(ind_dd_d, len_dd_d, off_dd_d, connect_d_dd)
+    
+    mt.connectivities[(dd,d)] = MeshConnectivity(dd, d, ind_dd_d, off_dd_d)
+end
+
+@noinline function fill_offsets!(off::Array{Int,1}, connect::MeshConnectivity)
+    nentities = length(off)
+    nconnect = 0
+    for ci in connect
+        for j in ci
+            nconnect += 1
+            for k = j+1:nentities
+                off[k] += 1
+            end
         end
     end
+    return nconnect
+end
 
-    # compute offsets
-    off = vcat(1, 1 + Array{Int,1}(cumsum([length(i) for i in ind_dd_d])))
-
-    mt.connectivities[(dd,d)] = MeshConnectivity(dd, d, vcat(ind_dd_d...), off)
+@noinline function fill_transpose!(ind::Array{Int,1}, len::Array{Int,1}, off::Array{Int,1}, connect::MeshConnectivity)
+    for (i, ci) in enumerate(connect)
+        for j in ci
+            ind[off[j]+len[j]] = i
+            len[j] += 1
+        end
+    end
+    return nothing
 end
 
 """
@@ -273,40 +324,96 @@ end
   Compute the incidence relation `d -> dd` from
   `d -> ddd` and `ddd -> dd` for `d >= dd`.
 """
+# function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
+#     @assert d >= d
+#     d_ddd  = getConnectivity(mt, d,   ddd)
+#     ddd_dd = getConnectivity(mt, ddd, dd)
+#     c_ddd_dd = collect(ddd_dd)
+    
+#     if d > dd
+#         d_0  = getConnectivity(mt, d,   0)
+#         dd_0 = getConnectivity(mt, dd,  0)
+
+#         c_d_0 = collect(d_0)
+#         c_dd_0 = collect(dd_0)
+#     end
+    
+#     # initialize indices vector for new connectivity 'd -> dd'
+#     nentities_d = length(d_ddd.offsets) - 1
+#     ind_d_dd = [Array{Int,1}() for i = 1:nentities_d]
+    
+#     for (i, d_ddd_i) in enumerate(d_ddd)
+#         for k in d_ddd_i
+#             for j in c_ddd_dd[k]
+#                 if (d == dd && i != j) || (d > dd && issubset(c_dd_0[j], c_d_0[i]))
+#                     if !(j in ind_d_dd[i])
+#                         push!(ind_d_dd[i], j)
+#                     end
+#                 end
+#             end
+#         end
+#     end
+
+#     # compute offsets
+#     off = vcat(1, 1 + cumsum([length(i) for i in ind_d_dd]))
+
+#     mt.connectivities[(d,dd)] = MeshConnectivity(d, dd, vcat(ind_d_dd...), off)
+# end
+
 function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
     @assert d >= d
     d_ddd  = getConnectivity(mt, d,   ddd)
     ddd_dd = getConnectivity(mt, ddd, dd)
     c_ddd_dd = collect(ddd_dd)
-    
-    if d > dd
-        d_0  = getConnectivity(mt, d,   0)
-        dd_0 = getConnectivity(mt, dd,  0)
 
-        c_d_0 = collect(d_0)
-        c_dd_0 = collect(dd_0)
-    end
-    
     # initialize indices vector for new connectivity 'd -> dd'
     nentities_d = length(d_ddd.offsets) - 1
     ind_d_dd = [Array{Int,1}() for i = 1:nentities_d]
     
-    for (i, d_ddd_i) in enumerate(d_ddd)
-        for k in d_ddd_i
-            for j in c_ddd_dd[k]
-                if (d == dd && i != j) || (d > dd && issubset(c_dd_0[j], c_d_0[i]))
-                    if !(j in ind_d_dd[i])
-                        push!(ind_d_dd[i], j)
-                    end
-                end
-            end
-        end
+    if d == dd
+        @time fill_intersection!(ind_d_dd, d_ddd, c_ddd_dd)
+    elseif d > dd
+        c_d_0  = collect(getConnectivity(mt, d,   0))
+        c_dd_0 = collect(getConnectivity(mt, dd,  0))
+
+        fill_intersection!(ind_d_dd, d_ddd, c_ddd_dd, c_d_0, c_dd_0)
     end
 
     # compute offsets
     off = vcat(1, 1 + cumsum([length(i) for i in ind_d_dd]))
 
     mt.connectivities[(d,dd)] = MeshConnectivity(d, dd, vcat(ind_d_dd...), off)
+end
+
+@noinline function fill_intersection!(d_dd::Array{Array{Int,1},1},
+                            d_ddd::MeshConnectivity, ddd_dd::Array{Array{Int,1},1})
+    for (i, d_ddd_i) in enumerate(d_ddd)
+        for k in d_ddd_i
+            for j in ddd_dd[k]
+                if (i != j) && !(j in d_dd[i])
+                    #push!(d_dd[i], j)
+                    resize!(d_dd[i], length(d_dd[i])+1)
+                    d_dd[i][end] = j
+                end
+            end
+        end
+    end
+    return nothing
+end
+
+@noinline function fill_intersection!(d_dd::Array{Array{Int,1},1},
+                            d_ddd::MeshConnectivity, ddd_dd::Array{Array{Int,1},1},
+                            d_0::Array{Array{Int,1},1}, dd_0::Array{Array{Int,1},1})
+    for (i, d_ddd_i) in enumerate(d_ddd)
+        for k in d_ddd_i
+            for j in ddd_dd[k]
+                if !(j in d_dd[i]) && issubset(dd_0[j], d_0[i])
+                    push!(d_dd[i], j)
+                end
+            end
+        end
+    end
+    return nothing
 end
 
 """
