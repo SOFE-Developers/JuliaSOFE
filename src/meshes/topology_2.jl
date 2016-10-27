@@ -220,6 +220,32 @@ end
 #     mt.connectivities[(dd,d)] = MeshConnectivity(dd, d, vcat(ind_dd_d...), off)
 # end
 
+function ntranspose(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+    @assert d > dd
+    # get connectivity d -> dd
+    connect_d_dd = getConnectivity(mt, d, dd)
+
+    I, J = findn(connect_d_dd)
+
+    # compute indices vector
+    P = sortperm(J)
+    ind_dd_d = similar(I)
+    for i = 1:length(P)
+        ind_dd_d[i] = I[P[i]]
+    end
+
+    # compute offsets vector
+    sort!(J)
+    off_dd_d = zeros(Int, maximum(J)+1)
+    off_dd_d[1] = 1
+    for j in J
+        off_dd_d[j+1] += 1
+    end
+    cumsum!(off_dd_d, off_dd_d)
+
+    return MeshConnectivity(dd, d, ind_dd_d, off_dd_d)
+end
+
 function transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     @assert d > dd
     # get connectivity d -> dd
@@ -240,7 +266,8 @@ function transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     # fill indices vector
     fill_transpose!(ind_dd_d, len_dd_d, off_dd_d, connect_d_dd)
     
-    mt.connectivities[(dd,d)] = MeshConnectivity(dd, d, ind_dd_d, off_dd_d)
+    #mt.connectivities[(dd,d)] = MeshConnectivity(dd, d, ind_dd_d, off_dd_d)
+    return MeshConnectivity(dd, d, ind_dd_d, off_dd_d)
 end
 
 @noinline function fill_offsets!(off::Array{Int,1}, connect::MeshConnectivity)
