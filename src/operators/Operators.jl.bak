@@ -12,96 +12,32 @@ export coeff, space, matrix, assemble!
 
 typealias Float AbstractFloat
 
-# Abstract Operators
 abstract AbstractOperator
 abstract BilinearOperator <: AbstractOperator
 abstract LinearOperator <: AbstractOperator
 
-#-------------------#
-# Coefficient Types #
-#-------------------#
-abstract AbstractCoefficient
-
-typealias CoeffType Union{Real, AbstractVector, AbstractArray, Function}
-
-type Coefficient{T<:CoeffType} <: AbstractCoefficient
-    c :: T
-end
-
-typealias ScalarCoefficient{T<:Real} Coefficient{T}
-typealias VectorCoefficient{T<:AbstractVector} Coefficient{T}
-typealias MatrixCoefficient{T<:AbstractMatrix} Coefficient{T}
-
-#----------------#
-# Operator Types #
-#----------------#
-type Operator{O<:BilinearOperator,C<:AbstractCoefficient} <: BilinearOperator
+#---------------#
+# Type Operator #
+#---------------#
+type Operator{O<:AbstractOperator} <: AbstractOperator
     fes :: FESpace
-    coeff :: C
-    matrix :: Matrix
+    coeff :: Function
+    matrix :: AbstractArray
     quadrule :: QuadRule
 end
-
-# Outer Constructors
-# -------------------
-function Operator{O<:BilinearOperator,C<:AbstractCoefficient}(::Type{O}, fes::FESpace, coeff::C)
+function Operator{O<:AbstractOperator}(::Type{O}, fes::FESpace, coeff::Function)
     if issubtype(type_(fes.element), PElement)
         qrule = QuadRuleSimp1()
     else
         error("Currently only simplical elements supported...")
     end
 
-    return Operator{O,C}(fes, coeff, Matrix(), qrule)
+    return Operator{O}(fes, coeff, [], qrule)
 end
-
-function Operator{O<:BilinearOperator, T<:Real}(::Type{O}, fes::FESpace, coeff::T)
-    return Operator(O, fes, ScalarCoefficient(coeff))
+function Operator{O<:AbstractOperator, T<:Real}(::Type{O}, fes::FESpace, coeff::T)
+    return Operator(O, fes,
+                    x->convert(coeff, typeof(x)) * ones(typeof(x), size(x,1)))
 end
-
-function Operator{O<:BilinearOperator, T<:AbstractVector}(::Type{O}, fes::FESpace, coeff::T)
-    return Operator(O, fes, VectorCoefficient(coeff))
-end
-    
-function Operator{O<:BilinearOperator, T<:AbstractMatrix}(::Type{O}, fes::FESpace, coeff::T)
-    return Operator(O, fes, MatrixCoefficient(coeff))
-end
-
-#------------------#
-# Functional Types #
-#------------------#
-type Functional{F<:LinearOperator,C<:AbstractCoefficient} <: LinearOperator
-    fes :: FESpace
-    coeff :: C
-    vector :: Vector
-    quadrule :: QuadRule
-end
-
-# Outer Constructors
-# -------------------
-function Functional{F<:LinearOperator,C<:AbstractCoefficient}(::Type{F}, fes::FESpace, coeff::C)
-    if issubtype(type_(fes.element), PElement)
-        qrule = QuadRuleSimp1()
-    else
-        error("Currently only simplical elements supported...")
-    end
-
-    return Functional{F,C}(fes, coeff, Vector(), qrule)
-end
-
-function Functional{F<:LinearOperator, T<:Real}(::Type{F}, fes::FESpace, coeff::T)
-    return Functional(F, fes, ScalarCoefficient(coeff))
-end
-
-function Functional{F<:LinearOperator, T<:AbstractVector}(::Type{F}, fes::FESpace, coeff::T)
-    return Functional(F, fes, VectorCoefficient(coeff))
-end
-    
-function Functional{F<:LinearOperator, T<:AbstractMatrix}(::Type{F}, fes::FESpace, coeff::T)
-    return Functional(F, fes, MatrixCoefficient(coeff))
-end
-
-
-#...
 
 # Associated Methods
 # -------------------
@@ -119,8 +55,8 @@ end
 # Type IdId #
 #-----------#
 type IdId <: BilinearOperator
+    IdId(fes::FESpace, coeff) = Operator(IdId, fes, coeff)
 end
-IdId(fes::FESpace, coeff) = Operator(IdId, fes, coeff)
 
 function assemble!(op::Operator{IdId}, d::Integer)
     fes = space(op)
@@ -206,9 +142,9 @@ end
 #-----------#
 type Id <: LinearOperator
 end
-Id(coeff, fes) = Functional(Id, coeff, fes)
+Id(coeff, fes) = Operator(Id, coeff, fes)
 
-function assemble!(op::Functional{Id}, d::Integer)
+function assemble!(op::Operator{Id}, d::Integer)
     fes = space(op)
     qpoints, qweights = quadData(fes, d)
     C = evalFunction(fes.mesh, coeff(fes), qpoints)
