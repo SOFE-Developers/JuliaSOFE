@@ -101,18 +101,22 @@ function Functional{F<:LinearOperator, T<:AbstractMatrix}(::Type{F}, fes::FESpac
 end
 
 
-#...
-
 # Associated Methods
 # -------------------
-@inline coeff(op::Operator) = op.coeff
-@inline space(op::Operator) = op.fes
-@inline matrix(op::Operator) = op.matrix
-@inline getCoefficient(op::Operator) = coeff(op)
-@inline getFESpace(op::Operator) = space(op)
-@inline getMatrix(op::Operator) = matrix(op)
-function setMatrix!{T<:Float}(op::Operator, M::AbstractArray{T,2})
-    op.matrix = M;
+@inline coeff{T<:AbstractOperator}(op::T) = op.coeff
+@inline space{T<:AbstractOperator}(op::T) = op.fes
+@inline matrix{T<:BilinearOperator}(a::T) = a.matrix
+@inline vector{T<:LinearOperator}(l::T) = l.vector
+
+@inline getCoefficient{T<:AbstractOperator}(op::T) = coeff(op)
+@inline getFESpace{T<:AbstractOperator}(op::T) = space(op)
+@inline getMatrix{T<:BilinearOperator}(a::T) = matrix(a)
+function setMatrix!{T<:BilinearOperator,S<:Float}(a::T, M::AbstractMatrix{S})
+    a.matrix = M;
+end
+@inline getVector{T<:LinearOperator}(l::T) = vector(op)
+function setVector!{T<:LinearOperator,S<:Float}(l::T, V::AbstractVector{S})
+    l.vector = V;
 end
 
 #-----------#
@@ -128,8 +132,8 @@ function assemble!(op::Operator{IdId}, d::Integer)
     #C = evalFunction(fes.mesh, coeff(fes), qpoints)
     dMap = dofMap(fes, d)
     ndof = Spaces.nDoF(fes)
-    jdet = evalJacobianDeterminat(fes.mesh, points)
-    basis = evalBasis(fes.element, points, 0)
+    jdet = evalJacobianDeterminat(fes.mesh, qpoints)
+    basis = evalBasis(fes.element, qpoints, 0)
 
     nB, nE = size(dMap)
     nP, nD = size(qpoints)

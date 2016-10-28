@@ -91,7 +91,8 @@ end
   finite element space `fes`.
 """
 function nDoF(fes::FESpace)
-    return maxabs(getDOFMap(fes, fes.mesh.dimension))
+    #return maxabs(getDOFMap(fes, fes.mesh.dimension))
+    return maxabs(dofMap(fes, fes.mesh.dimension))
 end
 
 """
