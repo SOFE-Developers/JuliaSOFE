@@ -63,6 +63,10 @@ end
 # Reference Maps
 include("refmaps.jl")
 
+function evaluate{T<:Float}(m::Mesh, f::Function, points::AbstractArray{T,2})
+    
+end
+
 function evalFunction{T<:Float}(m::Mesh, f::Function, points::AbstractArray{T,2})
     P = evalReferenceMap(m, points) # nExnPxnW
     (nE, nP, nW) = size(P)

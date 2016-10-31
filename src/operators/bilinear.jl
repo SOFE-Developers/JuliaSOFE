@@ -1,9 +1,12 @@
 abstract BilinearOperator <: AbstractOperator
 
+typealias AbsOp AbstractOperator
+typealias AbsCoeff AbstractCoefficient
+
 #----------------#
 # Operator Types #
 #----------------#
-type Operator{O<:BilinearOperator,C<:AbstractCoefficient} <: BilinearOperator
+type Operator{C<:AbsCoeff,U<:AbsOp,V<:AbsOp} <: BilinearOperator
     fes :: FESpace
     coeff :: C
     matrix :: Matrix
@@ -12,26 +15,26 @@ end
 
 # Outer Constructors
 # -------------------
-function Operator{O<:BilinearOperator,C<:AbstractCoefficient}(::Type{O}, fes::FESpace, coeff::C)
+function Operator{C<:AbsCoeff,U<:AbsOp,V<:AbsOp}(::Type{U}, ::Type{V}, fes::FESpace, coeff::C)
     if issubtype(type_(fes.element), PElement)
         qrule = QuadRuleSimp1()
     else
         error("Currently only simplical elements supported...")
     end
 
-    return Operator{O,C}(fes, coeff, Matrix(), qrule)
+    return Operator{C,U,V}(fes, coeff, Matrix(), qrule)
 end
 
-function Operator{O<:BilinearOperator, T<:Real}(::Type{O}, fes::FESpace, coeff::T)
-    return Operator(O, fes, ScalarCoefficient(coeff))
+function Operator{U<:AbsOp,V<:AbsOp,T<:Real}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
+    return Operator(U, V, fes, ScalarCoefficient(coeff))
 end
 
-function Operator{O<:BilinearOperator, T<:AbstractVector}(::Type{O}, fes::FESpace, coeff::T)
-    return Operator(O, fes, VectorCoefficient(coeff))
+function Operator{U<:AbsOp,V<:AbsOp,T<:AbstractVector}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
+    return Operator(U, V, fes, VectorCoefficient(coeff))
 end
     
-function Operator{O<:BilinearOperator, T<:AbstractMatrix}(::Type{O}, fes::FESpace, coeff::T)
-    return Operator(O, fes, MatrixCoefficient(coeff))
+function Operator{U<:AbsOp,V<:AbsOp,T<:AbstractMatrix}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
+    return Operator(U, V, fes, MatrixCoefficient(coeff))
 end
 
 # Associated methods
@@ -49,44 +52,17 @@ function setMatrix!{T<:BilinearOperator,S<:Float}(a::T, M::AbstractMatrix{S})
 end
 
 #-----------#
-# Type IdId #
+# Type idid #
 #-----------#
-type IdId <: BilinearOperator
+type idid <: BilinearOperator
 end
-IdId(fes::FESpace, coeff) = Operator(IdId, fes, coeff)
+idid(fes::FESpace, coeff) = Operator(id, id, fes, coeff)
 
-function assemble!(op::Operator{IdId}, d::Integer)
+function evaluate{C<:AbsCoeff}(op::Operator{C,id,id}, d::Integer)
+    points = qpoints(op.quadrule, d)
     fes = space(op)
-    qpoints, qweights = quadData(op.quadrule, d)
-    #C = evalFunction(fes.mesh, coeff(fes), qpoints)
-    dMap = dofMap(fes, d)
-    ndof = Spaces.nDoF(fes)
-    jdet = evalJacobianDeterminat(fes.mesh, qpoints)
-    basis = evalBasis(fes.element, qpoints, 0)
-
-    nB, nE = size(dMap)
-    nP, nD = size(qpoints)
-
-    C = ones(nE,nP)
-    
-    entries = zeros(eltype(qpoints), nE, nB, nB)
-    dofI = zeros(Int, nE, nB, nB)
-    dofJ = zeros(Int, nE, nB, nB)
-
-    for jb = 1:nB
-        for ib = 1:nB
-            for ie = 1:nE
-                dofI[ie,ib,jb] = dMap[ib,ie]
-                dofJ[ie,ib,jb] = dMap[jb,ie]
-                for ip = 1:nP
-                    entries[ie,ib,jb] += C[ie,ip] * basis[jb,ip] * basis[ib,ip] * qweights[ip] * jdet[ie,ip]
-                end
-            end
-        end
-    end
-
-    M = sparse(dofI[:], dofJ[:], entries[:], ndof, ndof)
-    setMatrix!(op, M)
+    basis = evalBasis(fes.element, points, 0)
+    return basis, basis
 end
 
 #---------------#
@@ -94,43 +70,30 @@ end
 #---------------#
 type GradGrad <: BilinearOperator
 end
-GradGrad(coeff, fes) = Operator(GradGrad, coeff, fes)
+GradGrad(fes, coeff) = Operator(Grad, Grad, fes, coeff)
 
-function assemble!(op::Operator{GradGrad})
+function evaluate{C<:AbsCoeff}(op::Operator{C,Grad,Grad}, d::Integer)
+    points = qpoints(op.quadrule, d)
     fes = space(op)
-    qpoints, qweights = quadData(fes, dim(fes.mesh))
-    C = evalFunction(fes.mesh, coeff(fes), qpoints)
-    dMap = dofMap(fes, dim(fes.mesh))
-    ndof = nDoF(fes)
-    DPhi = evalReferenceMaps(fes.mesh, qpoints, 1)
-    jdet = evalJacobianDeterminat(fes.mesh, qpoints)
-
     dbasis = evalBasis(fes.element, points, 1)
+    invdphi = evalJacobianInverse(fes.mesh, points)
 
-    nB, nE = size(dMap)
-    nP, nD = size(qpoints)
+    nE, nP, nW, nW = size(invdphi)
+    nB, nP, nW = size(dbasis)
 
-    entries = zeros(eltype(qpoints), nE, nB, nB)
-    dofI = zeros(Int, nE, nB, nB)
-    dofJ = zeros(Int, nE, nB, nB)
+    grad = zeros(eltype(points), nE, nB, nP, nW)
 
-    error("Not Implemented yet...")
-    
-    for jb = 1:nB
-        for ib = 1:nB
-            for ie = 1:nE
-                dofI[ie,ib,jb] = dMap[ib,ie]
-                dofJ[ie,ib,jb] = dMap[jb,ie]
+    for jd = 1:nW
+        for id = 1:nW
+            for ib = 1:nB
                 for ip = 1:nP
-                    dphi = DPhi[ie,ip,:,:]
-                    grad = dphi'\hcat(dbasis[ib,ip,:], dbasis[jb,ip,:])
-                    entries[ie,ib,jb] += C[ie,ip] * basis[jb,ip] * basis[ib,ip] * qweights[ip] * jdet[ie,ip]
+                    for ie = 1:nE
+                        grad[ie,ip,ib,id] += invdphi[ie,ip,jd,id] * dbasis[ib,ip,id]
+                    end
                 end
             end
         end
     end
-
-    M = sparse(dofI[:], dofJ[:], entries[:], ndof, ndof)
-    setMatrix!(op, M)
+    return grad, grad
 end
 

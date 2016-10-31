@@ -29,7 +29,7 @@ function (c::ConstantCoefficient)(x)
     return value(c)
 end
 
-function evaluate{T<:Float,C<:ConstantCoefficient}(m::Mesh, c::C, points::AbstractArray{T,2})
+function evaluate{T<:Float,C<:ConstantCoefficient}(c::C, m::Mesh, points::AbstractArray{T,2})
     P = evalReferenceMaps(m, points)
     nE, nP, nW = size(P)
 
