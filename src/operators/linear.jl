@@ -3,7 +3,7 @@ abstract LinearOperator <: AbstractOperator
 #------------------#
 # Functional Types #
 #------------------#
-type Functional{F<:LinearOperator,C<:AbstractCoefficient} <: LinearOperator
+type Functional{C<:AbstractCoefficient,V<:AbstractOperator} <: LinearOperator
     fes :: FESpace
     coeff :: C
     vector :: Vector
@@ -12,14 +12,14 @@ end
 
 # Outer Constructors
 # -------------------
-function Functional{F<:LinearOperator,C<:AbstractCoefficient}(::Type{F}, fes::FESpace, coeff::C)
+function Functional{C<:AbstractCoefficient,V<:AbstractOperator}(::Type{V}, fes::FESpace, coeff::C)
     if issubtype(type_(fes.element), PElement)
         qrule = QuadRuleSimp1()
     else
         error("Currently only simplical elements supported...")
     end
 
-    return Functional{F,C}(fes, coeff, Vector(), qrule)
+    return Functional{C,V}(fes, coeff, zeros(Spaces.nDoF(fes)), qrule)
 end
 
 function Functional{F<:LinearOperator, T<:Real}(::Type{F}, fes::FESpace, coeff::T)
@@ -39,47 +39,51 @@ end
 # -------------------
 """
 
-    matrix(l::LinearOperator)
+    vector(l::LinearOperator)
 
   Return the discretized version of the linear operator `l`.
 """
-@inline vector{T<:LinearOperator}(l::T) = l.vector
+@inline vector{T<:LinearOperator}(l::T) = getfield(l, :vector)
 @inline getVector{T<:LinearOperator}(l::T) = vector(op)
 function setVector!{T<:LinearOperator,S<:Float}(l::T, V::AbstractVector{S})
     l.vector = V;
 end
 
-#-----------#
-# Type Id   #
-#-----------#
-type Id <: LinearOperator
+#------------#
+# Type fid   #
+#------------#
+type fid <: LinearOperator
 end
-Id(coeff, fes) = Functional(Id, coeff, fes)
+fid(fes::FESpace, coeff) = Functional(id, fes, coeff)
 
-function assemble!(op::Functional{Id}, d::Integer)
-    fes = space(op)
-    qpoints, qweights = quadData(fes, d)
-    C = evalFunction(fes.mesh, coeff(fes), qpoints)
-    dMap = dofMap(fes, d)
-    ndof = nDoF(fes)
-    jdet = evalJacobianDeterminat(fes.mesh, points)
-    basis = evalBasis(fes.element, points, 0)
+function evaluate{C<:AbstractCoefficient}(fnc::Functional{C,id}, d::Integer)
+    points = qpoints(fnc.quadrule, d)
+    c = value(eltype(points), coeff(fnc))
+    basis = evalBasis(element(space(fnc)), points, 0)
+    return c, basis
+end
 
-    nB, nE = size(dMap)
-    nP, nD = size(qpoints)
+#---------------------#
+# Assembling Routines #
+#---------------------#
 
-    entries = zeros(eltype(qpoints), nE, nB)
-    dofI = zeros(Int, nE, nB)
-
+# Constant Coefficients
+function fill_entries!{T<:Real,Tc<:data,Tv<:op}(::Functional{Tc,Tv},
+                                                E::AbstractArray{T,2},
+                                                C::T,
+                                                V::AbstractArray{T,2},
+                                                w::AbstractArray{T,1},
+                                                D::AbstractArray{T,2})
+    nE, nB = size(E)
+    nP = size(w, 1)
     for ib = 1:nB
         for ie = 1:nE
-            dofI[ie,ib] = dMap[ib,ie]
             for ip = 1:nP
-                entries[ie,ib] += C[ie,ip] * basis[ib,ip] * qweights[ip] * jdet[ie,ip]
+                E[ie,ib] += C * V[ib,ip] * w[ip] * D[ie,ip]
             end
         end
     end
 
-    F = sparsevec(dofI[:], entries[:], ndof)
-    setMatrix!(op, F)
+    return nothing
 end
+

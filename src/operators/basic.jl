@@ -1,3 +1,15 @@
+abstract ScalarOperator <: AbstractOperator
+abstract VectorOperator <: AbstractOperator
+abstract MatrixOperator <: AbstractOperator
+
+typealias op ScalarOperator
+typealias Op VectorOperator
+typealias OP MatrixOperator
+
+typealias data ScalarCoefficient
+typealias Data VectorCoefficient
+typealias DATA MatrixCoefficient
+
 #-------------------------#
 # Identity Operator Types #
 #-------------------------#
@@ -12,3 +24,9 @@ type grad <: ScalarOperator end
 type Grad <: VectorOperator end
 type GRAD <: MatrixOperator end
 
+#---------------------------#
+# Divergence Operator Types #
+#---------------------------#
+type div <: ScalarOperator end
+type Div <: VectorOperator end
+type DIV <: MatrixOperator end

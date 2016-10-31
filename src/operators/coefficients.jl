@@ -25,8 +25,22 @@ typealias MatrixCoefficient{T<:Real, S<:AbstractMatrix{T}} ConstantCoefficient{S
 """
 @inline value(c::ConstantCoefficient) = getfield(c, :value)
 
+"""
+
+    value{T<:Real}(::Type{T), c::ConstantCoefficient)
+
+  Return the constant value of the coefficient `c` where its 
+  element type is promoted to type `T` if necessary.
+"""
+value{T<:Real,S<:Real}(::Type{T}, c::ScalarCoefficient{S}) =
+    convert(promote_type(T, S), value(c))
+value{T<:Real,S<:AbstractVector}(::Type{T}, c::ConstantCoefficient{S}) =
+    convert(Vector{promote_type(T,eltype(S))}, value(c))
+value{T<:Real,S<:AbstractMatrix}(::Type{T}, c::ConstantCoefficient{S}) =
+    convert(Matrix{promote_type(T,eltype(S))}, value(c))
+
 function (c::ConstantCoefficient)(x)
-    return value(c)
+    return value(eltype(x), c)
 end
 
 function evaluate{T<:Float,C<:ConstantCoefficient}(c::C, m::Mesh, points::AbstractArray{T,2})

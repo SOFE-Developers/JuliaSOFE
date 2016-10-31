@@ -8,7 +8,7 @@ using ..Elements
 using ..Meshes
 
 export AbstractFESpace, FESpace
-export dofMap, nDoF, dofIndices, dofMask, extractDoFs, interpolate
+export mesh, element, dofMap, nDoF, dofIndices, dofMask, extractDoFs, interpolate
 
 abstract AbstractFESpace
 
@@ -33,6 +33,9 @@ end
 
 # Associated Methods
 # -------------------
+@inline mesh(fes::FESpace) = getfield(fes, :mesh)
+@inline element(fes::FESpace) = getfield(fes, :element)
+
 """
 
     dofMap(fes::FESpace, d::Integer)
