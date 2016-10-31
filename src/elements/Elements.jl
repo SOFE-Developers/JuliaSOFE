@@ -125,6 +125,7 @@ dofTuple(el::Element{LagrangeP1}) = (1, 0, 0, 0)[1:dimension(el)+1]
 # -------------------
 function evalD0Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,2})
     for ip = 1:size(points, 1)
+        out[1,ip] = one(T)
         for id = 1:size(points, 2)
             out[1,ip] -= points[ip,id]
             out[id+1,ip] = points[ip,id]
