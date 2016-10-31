@@ -14,7 +14,7 @@ end
 # -------------------
 function Functional{C<:AbstractCoefficient,V<:AbstractOperator}(::Type{V}, fes::FESpace, coeff::C)
     if issubtype(type_(fes.element), PElement)
-        qrule = QuadRuleSimp1()
+        qrule = QuadRuleSimp2()
     else
         error("Currently only simplical elements supported...")
     end
