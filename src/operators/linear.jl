@@ -22,16 +22,16 @@ function Functional{C<:AbstractCoefficient,V<:AbstractOperator}(::Type{V}, fes::
     return Functional{C,V}(fes, coeff, zeros(Spaces.nDoF(fes)), qrule)
 end
 
-function Functional{F<:LinearOperator, T<:Real}(::Type{F}, fes::FESpace, coeff::T)
-    return Functional(F, fes, ScalarCoefficient(coeff))
+function Functional{V<:AbstractOperator, T<:Real}(::Type{V}, fes::FESpace, coeff::T)
+    return Functional(V, fes, ScalarCoefficient(coeff))
 end
 
-function Functional{F<:LinearOperator, T<:AbstractVector}(::Type{F}, fes::FESpace, coeff::T)
-    return Functional(F, fes, VectorCoefficient(coeff))
+function Functional{V<:AbstractOperator, T<:AbstractVector}(::Type{V}, fes::FESpace, coeff::T)
+    return Functional(V, fes, VectorCoefficient(coeff))
 end
     
-function Functional{F<:LinearOperator, T<:AbstractMatrix}(::Type{F}, fes::FESpace, coeff::T)
-    return Functional(F, fes, MatrixCoefficient(coeff))
+function Functional{V<:AbstractOperator, T<:AbstractMatrix}(::Type{V}, fes::FESpace, coeff::T)
+    return Functional(V, fes, MatrixCoefficient(coeff))
 end
 
 
