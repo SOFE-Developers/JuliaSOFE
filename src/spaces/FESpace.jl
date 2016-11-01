@@ -50,7 +50,7 @@ end
 """
 function dofMap(fes::FESpace, d::Integer)
     dofTuple = Elements.dofTuple(fes.element)
-    dofPerDim = nDoF(fes.element)
+    dofPerDim = nDoF(fes.element, d)
     nEntities = [getNumber(fes.mesh.topology, dd) for dd = 0:d]
     dofsNeeded = [nEntities[dd+1] * dofTuple[dd+1] for dd = 0:d]
     ndofs = [0, cumsum(dofsNeeded)...]

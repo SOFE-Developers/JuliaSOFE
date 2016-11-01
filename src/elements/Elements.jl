@@ -67,8 +67,10 @@ end
 @inline nVertices{E<:PElement}(el::Element{E}) = tuple(2:(dimension(el)+1)...)
 @inline nVertices{E<:QElement}(el::Element{E}) = tuple(2.^(1:dimension(el))...)
 
-function nDoF{E<:PElement}(el::Element{E})
-    return map(*, dofTuple(el), binomial(dimension(el)+1, k) for k = 1:dimension(el)+1)
+@inline nDoF(el::AbstractElement) = nDoF(el, dimension(el))
+function nDoF{E<:PElement}(el::Element{E}, d::Integer)
+    #return map(*, dofTuple(el), binomial(dimension(el)+1, k) for k = 1:dimension(el)+1)
+    return map(*, dofTuple(el), binomial(d+1, k) for k = 1:d+1)
 end
 function nDoF{E<:QElement}(el::Element{E})
     if dimension(el) == 1
@@ -81,7 +83,6 @@ function nDoF{E<:QElement}(el::Element{E})
         error("Invalid element dimension ", dimension(el))
     end
 end
-@inline nDoF(el::AbstractElement, d::Integer) = nDoF(el)[d]
 
 """
 
