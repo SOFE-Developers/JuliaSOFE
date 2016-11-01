@@ -80,17 +80,17 @@ function evaluate{C<:ConstantCoefficient}(op::Operator{C,Grad,Grad}, d::Integer)
     dbasis = evalBasis(element(space(op)), points, 1)
     invdphi = evalJacobianInverse(mesh(space(op)), points)
 
-    nE, nP, nW, nW = size(invdphi)
+    nE, nP, nW, nD = size(invdphi)
     nB, nP, nW = size(dbasis)
 
     grad = zeros(eltype(points), nE, nB, nP, nW)
 
     for jd = 1:nW
         for id = 1:nW
-            for ib = 1:nB
-                for ip = 1:nP
+            for ip = 1:nP
+                for ib = 1:nB
                     for ie = 1:nE
-                        grad[ie,ip,ib,id] += invdphi[ie,ip,jd,id] * dbasis[ib,ip,id]
+                        grad[ie,ib,ip,id] += invdphi[ie,ip,jd,id] * dbasis[ib,ip,id]
                     end
                 end
             end
@@ -135,11 +135,12 @@ function fill_entries!{T<:Real,Tc<:data,Tu<:Op,Tv<:Op}(::Operator{Tc,Tu,Tv},
                                                        D::AbstractArray{T,2})
     nE, nBi, nBj = size(E)
     nE, nB, nP, nW = size(U)
-    for jb = 1:nBj
-        for ib = 1:nBi
-            for ie = 1:nE
-                for ip = 1:nP
-                    for id = 1:nW
+
+    for ip = 1:nP
+        for id = 1:nW
+            for jb = 1:nBj
+                for ib = 1:nBi
+                    for ie = 1:nE
                         E[ie,ib,jb] += C * U[ie,jb,ip,id] * V[ie,ib,ip,id] * w[ip] * D[ie,ip]
                     end
                 end
