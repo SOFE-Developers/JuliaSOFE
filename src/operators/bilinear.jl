@@ -58,7 +58,7 @@ type idid <: BilinearOperator
 end
 idid(fes::FESpace, coeff) = Operator(id, id, fes, coeff)
 
-function evaluate{C<:ScalarCoefficient}(op::Operator{C,id,id}, d::Integer)
+function evaluate{C<:ConstantCoefficient}(op::Operator{C,id,id}, d::Integer)
     points = qpoints(op.quadrule, d)
     c = value(eltype(points), coeff(op))
     basis = evalBasis(element(space(op)), points, 0)

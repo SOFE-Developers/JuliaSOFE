@@ -70,11 +70,18 @@ function (f::FunctionCoefficient)(x)
     return getfield(f, :func)(x)
 end
 
-function evaluate{T<:Float,F<:FunctionCoefficient}(m::Mesh, f::F, points::AbstractArray{T,2})
+function evaluate{F<:FunctionCoefficient,T<:Float}(f::F, points::AbstractArray{T,2})
+    return f(points)
+end
+
+function evaluate{F<:FunctionCoefficient,T<:Float}(f::F, points::AbstractArray{T,2}, m::Mesh)
     P = evalReferenceMaps(m, points)
     nE, nP, nW = size(P)
 
     R = f(reshape(P, (nE*nP,nW)))
-    return reshape(R, nE, nP, size(R,(2:ndims(R))...)...)
+    nF = size(R, (2,(3:ndims(R))...)...)
+    R = nF == 1 ? reshape(R, nE, nP) : reshape(R, nE, nP, nF...)
+
+    return R
 end
 

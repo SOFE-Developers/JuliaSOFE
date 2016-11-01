@@ -34,6 +34,9 @@ function Functional{V<:AbstractOperator, T<:AbstractMatrix}(::Type{V}, fes::FESp
     return Functional(V, fes, MatrixCoefficient(coeff))
 end
 
+function Functional{V<:AbstractOperator, T<:Function}(::Type{V}, fes::FESpace, coeff::T)
+    return Functional(V, fes, FunctionCoefficient(coeff))
+end
 
 # Associated Methods
 # -------------------
@@ -56,9 +59,16 @@ type fid <: LinearOperator
 end
 fid(fes::FESpace, coeff) = Functional(id, fes, coeff)
 
-function evaluate{C<:AbstractCoefficient}(fnc::Functional{C,id}, d::Integer)
+function evaluate{C<:ConstantCoefficient}(fnc::Functional{C,id}, d::Integer)
     points = qpoints(fnc.quadrule, d)
     c = value(eltype(points), coeff(fnc))
+    basis = evalBasis(element(space(fnc)), points, 0)
+    return c, basis
+end
+
+function evaluate{C<:FunctionCoefficient}(fnc::Functional{C,id}, d::Integer)
+    points = qpoints(fnc.quadrule, d)
+    c = evaluate(coeff(fnc), points, mesh(space(fnc)))
     basis = evalBasis(element(space(fnc)), points, 0)
     return c, basis
 end
