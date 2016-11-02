@@ -32,7 +32,7 @@ typealias MatrixCoefficient{T<:Real, S<:AbstractMatrix{T}} ConstantCoefficient{S
   Return the constant value of the coefficient `c` where its 
   element type is promoted to type `T` if necessary.
 """
-value{T<:Real,S<:Real}(::Type{T}, c::ScalarCoefficient{S}) =
+value{T<:Real,S<:Real}(::Type{T}, c::ConstantCoefficient{S}) =
     convert(promote_type(T, S), value(c))
 value{T<:Real,S<:AbstractVector}(::Type{T}, c::ConstantCoefficient{S}) =
     convert(Vector{promote_type(T,eltype(S))}, value(c))

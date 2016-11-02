@@ -32,7 +32,7 @@ include("basic.jl")
 
   Return the finite element space of the operator `op`.
 """
-@inline space{T<:AbstractOperator}(op::T) = op.fes
+@inline space{T<:AbstractOperator}(op::T) = getfield(op, :fes)
 @inline getFESpace{T<:AbstractOperator}(op::T) = space(op)
 
 """
@@ -41,19 +41,24 @@ include("basic.jl")
 
   Return the coefficient of the operator `op`.
 """
-@inline coeff{T<:AbstractOperator}(op::T) = op.coeff
+@inline coeff{T<:AbstractOperator}(op::T) = getfield(op, :coeff)
 @inline getCoefficient{T<:AbstractOperator}(op::T) = coeff(op)
 
 # Includes
 include("bilinear.jl")
 include("linear.jl")
 
-function assemble(op::Operator, d::Integer)
+#---------------------#
+# Assembling Routines #
+#---------------------#
+assemble!(op::AbstractOperator) = assemble!(op, dimension(mesh(space(op))))
+
+function assemble!(op::Operator, d::Integer)
     qpoints, qweights = quadData(op.quadrule, d)
     
     fes = space(op)
     dMap = dofMap(fes, d)
-    ndof = Spaces.nDoF(fes)
+    ndof = nDoF(fes)
     
     nB, nE = size(dMap)
     nP, nD = size(qpoints)
@@ -77,10 +82,10 @@ function assemble(op::Operator, d::Integer)
     fill_entries!(op, entries, C, U, V, qweights, Det)
 
     A = sparse(dofI[:], dofJ[:], entries[:], ndof, ndof)
-    return A
+    matrix!(op, A)
 end
 
-function assemble(fnc::Functional, d::Integer)
+function assemble!(fnc::Functional, d::Integer)
     qpoints, qweights = quadData(fnc.quadrule, d)
 
     fes = space(fnc)
@@ -105,8 +110,10 @@ function assemble(fnc::Functional, d::Integer)
     fill_entries!(fnc, entries, C, V, qweights, Det)
 
     L = sparsevec(dofI[:], entries[:], ndof)
-    return L
+    vector!(fnc, full(L))
 end
+
+include("entries.jl")
 
 end # of module Operators
 

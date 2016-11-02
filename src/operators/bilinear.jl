@@ -9,7 +9,7 @@ typealias AbsCoeff AbstractCoefficient
 type Operator{C<:AbsCoeff,U<:AbsOp,V<:AbsOp} <: BilinearOperator
     fes :: FESpace
     coeff :: C
-    matrix :: Matrix
+    matrix :: SparseMatrixCSC
     quadrule :: QuadRule
 end
 
@@ -47,9 +47,8 @@ end
 """
 @inline matrix{T<:BilinearOperator}(a::T) = getfield(a, :matrix)
 @inline getMatrix{T<:BilinearOperator}(a::T) = matrix(a)
-function setMatrix!{T<:BilinearOperator,S<:Float}(a::T, M::AbstractMatrix{S})
-    a.matrix = M;
-end
+@inline matrix!{T<:BilinearOperator}(a::T, A::SparseMatrixCSC) = setfield!(a, :matrix, A)
+@inline setMatrix!{T<:BilinearOperator}(a::T, A::SparseMatrixCSC) = matrix!(a, A)
 
 #-----------#
 # Type idid #
@@ -98,104 +97,6 @@ function evaluate{C<:ConstantCoefficient}(op::Operator{C,Grad,Grad}, d::Integer)
     end
 
     return c, grad, grad
-end
-
-#---------------------#
-# Assembling Routines #
-#---------------------#
-
-# Constant Coefficients
-function fill_entries!{T<:Real,Tc<:data,Tu<:op,Tv<:op}(::Operator{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3},
-                                                       C::T,
-                                                       U::AbstractArray{T,2},
-                                                       V::AbstractArray{T,2},
-                                                       w::AbstractArray{T,1},
-                                                       D::AbstractArray{T,2})
-    nE, nBi, nBj = size(E)
-    nP = size(w, 1)
-    for jb = 1:nBj
-        for ib = 1:nBi
-            for ie = 1:nE
-                for ip = 1:nP
-                    E[ie,ib,jb] += C * U[jb,ip] * V[ib,ip] * w[ip] * D[ie,ip]
-                end
-            end
-        end
-    end
-    return nothing
-end
-
-function fill_entries!{T<:Real,Tc<:data,Tu<:Op,Tv<:Op}(::Operator{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3},
-                                                       C::T,
-                                                       U::AbstractArray{T,4},
-                                                       V::AbstractArray{T,4},
-                                                       w::AbstractArray{T,1},
-                                                       D::AbstractArray{T,2})
-    nE, nBi, nBj = size(E)
-    nE, nB, nP, nW = size(U)
-
-    for ip = 1:nP
-        for id = 1:nW
-            for jb = 1:nBj
-                for ib = 1:nBi
-                    for ie = 1:nE
-                        E[ie,ib,jb] += C * U[ie,jb,ip,id] * V[ie,ib,ip,id] * w[ip] * D[ie,ip]
-                    end
-                end
-            end
-        end
-    end
-    return nothing
-end
-
-function fill_entries!{T<:Real,Tc<:Data,Tu<:Op,Tv<:op}(::Operator{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3},
-                                                       C::AbstractArray{T,1},
-                                                       U::AbstractArray{T,4},
-                                                       V::AbstractArray{T,2},
-                                                       w::AbstractArray{T,1},
-                                                       D::AbstractArray{T,2})
-    nE, nBi, nBj = size(E)
-    nE, nB, nP, nW = size(U)
-    for jb = 1:nBj
-        for ib = 1:nBi
-            for ie = 1:nE
-                for ip = 1:nP
-                    for id = 1:nW
-                        E[ie,ib,jb] += C[id] * U[ie,jb,ip,id] * V[ib,ip] * w[ip] * D[ie,ip]
-                    end
-                end
-            end
-        end
-    end
-    return nothing
-end
-
-function fill_entries!{T<:Real,Tc<:DATA,Tu<:Op,Tv<:Op}(::Operator{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3},
-                                                       C::AbstractArray{T,2},
-                                                       U::AbstractArray{T,4},
-                                                       V::AbstractArray{T,4},
-                                                       w::AbstractArray{T,1},
-                                                       D::AbstractArray{T,2})
-    nE, nBi, nBj = size(E)
-    nE, nB, nP, nW = size(U)
-    for jb = 1:nBj
-        for ib = 1:nBi
-            for ie = 1:nE
-                for ip = 1:nP
-                    for jd = 1:nW
-                        for id = 1:nW
-                            E[ie,ib,jb] += C[id,jd] * U[ie,jb,ip,jd] * V[ie,ib,ip,id] * w[ip] * D[ie,ip]
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return nothing
 end
 
 # Non-Constant Coefficients

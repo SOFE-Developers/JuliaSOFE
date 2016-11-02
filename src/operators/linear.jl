@@ -48,9 +48,8 @@ end
 """
 @inline vector{T<:LinearOperator}(l::T) = getfield(l, :vector)
 @inline getVector{T<:LinearOperator}(l::T) = vector(op)
-function setVector!{T<:LinearOperator,S<:Float}(l::T, V::AbstractVector{S})
-    l.vector = V;
-end
+@inline vector!{T<:LinearOperator}(l::T, L::Vector) = setfield!(l, :vector, L)
+setVector!{T<:LinearOperator}(l::T, L::Vector) = vector!(l, L)
 
 #------------#
 # Type fid   #
@@ -71,29 +70,5 @@ function evaluate{C<:FunctionCoefficient}(fnc::Functional{C,id}, d::Integer)
     c = evaluate(coeff(fnc), points, mesh(space(fnc)))
     basis = evalBasis(element(space(fnc)), points, 0)
     return c, basis
-end
-
-#---------------------#
-# Assembling Routines #
-#---------------------#
-
-# Constant Coefficients
-function fill_entries!{T<:Real,Tc<:data,Tv<:op}(::Functional{Tc,Tv},
-                                                E::AbstractArray{T,2},
-                                                C::T,
-                                                V::AbstractArray{T,2},
-                                                w::AbstractArray{T,1},
-                                                D::AbstractArray{T,2})
-    nE, nB = size(E)
-    nP = size(w, 1)
-    for ib = 1:nB
-        for ie = 1:nE
-            for ip = 1:nP
-                E[ie,ib] += C * V[ib,ip] * w[ip] * D[ie,ip]
-            end
-        end
-    end
-
-    return nothing
 end
 
