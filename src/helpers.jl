@@ -1,6 +1,6 @@
 module Helpers
 
-export tensorprod, lagrangeNodesP
+export tensorprod, lagrangeNodesP, ndarray
 
 function tensorprod{T}(gridx::AbstractArray{T,1}, gridy::AbstractArray{T,1})
     return hcat([j for i in gridx for j in gridy],
@@ -62,6 +62,23 @@ function lagrangeNodesP(d::Integer, p::Integer)
             nodes = vcat(v, e, i)
         end
     end
+end
+
+function ndarray{T<:Real}(A::AbstractArray{AbstractArray{T}})
+    sza = size(A)
+    sza1 = size(A[1])
+    szb = tuple(sza..., sza1...)
+    B = Array{T}(szb...)
+
+    for i in eachindex(A)
+        ii = ind2sub(sza, i)
+        for j in eachindex(A[i])
+            k = tuple(ii..., ind2sub(sza1, j)...)
+            B[k...] = A[i][j]
+        end
+    end
+
+    return B
 end
 
 end # of module Helpers

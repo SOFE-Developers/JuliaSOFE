@@ -66,8 +66,13 @@ end
 
 # Associated Methods
 # -------------------
-function (f::FunctionCoefficient)(x)
-    return getfield(f, :func)(x)
+function (f::FunctionCoefficient){T<:Real}(xs::T...)
+    return getfield(f, :func)(xs...)
+end
+(f::FunctionCoefficient){T<:Real}(x::AbstractVector{T}) = f(x...)
+function (f::FunctionCoefficient){T<:Real}(X::AbstractArray{T,2})
+    Y = [view(X, i, :) for i = 1:size(X,1)]
+    return f.(Y)
 end
 
 function evaluate{F<:FunctionCoefficient,T<:Float}(f::F, points::AbstractArray{T,2})
@@ -80,7 +85,7 @@ function evaluate{F<:FunctionCoefficient,T<:Float}(f::F, points::AbstractArray{T
 
     R = f(reshape(P, (nE*nP,nW)))
     nF = size(R, (2,(3:ndims(R))...)...)
-    R = nF == 1 ? reshape(R, nE, nP) : reshape(R, nE, nP, nF...)
+    R = (nF == 1) ? reshape(R, nE, nP) : reshape(R, nE, nP, nF...)
 
     return R
 end

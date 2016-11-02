@@ -110,6 +110,10 @@ function fill_entries!{T<:Real,Tc<:DATA,Tu<:Op,Tv<:Op}(::Operator{Tc,Tu,Tv},
     return nothing
 end
 
+# Non-Constant Coefficients
+# --------------------------
+
+
 # Linear Operators
 # =================
 
@@ -134,3 +138,4 @@ function fill_entries!{T<:Real,Tc<:data,Tv<:op}(::Functional{Tc,Tv},
 
     return nothing
 end
+

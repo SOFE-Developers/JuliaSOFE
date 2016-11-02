@@ -19,7 +19,7 @@ function Functional{C<:AbstractCoefficient,V<:AbstractOperator}(::Type{V}, fes::
         error("Currently only simplical elements supported...")
     end
 
-    return Functional{C,V}(fes, coeff, zeros(Spaces.nDoF(fes)), qrule)
+    return Functional{C,V}(fes, coeff, zeros(nDoF(fes)), qrule)
 end
 
 function Functional{V<:AbstractOperator, T<:Real}(::Type{V}, fes::FESpace, coeff::T)
