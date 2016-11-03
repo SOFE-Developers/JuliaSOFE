@@ -64,11 +64,13 @@ function lagrangeNodesP(d::Integer, p::Integer)
     end
 end
 
-function ndarray{T<:Real}(A::AbstractArray{AbstractArray{T}})
+#function ndarray{T<:Real}(A::AbstractArray{AbstractArray{T}})
+function ndarray{T<:AbstractArray}(A::AbstractArray{T})
     sza = size(A)
     sza1 = size(A[1])
     szb = tuple(sza..., sza1...)
-    B = Array{T}(szb...)
+    #B = Array{T}(szb...)
+    B = Array{eltype(A[1])}(szb...)
 
     for i in eachindex(A)
         ii = ind2sub(sza, i)
@@ -80,5 +82,6 @@ function ndarray{T<:Real}(A::AbstractArray{AbstractArray{T}})
 
     return B
 end
+ndarray{T<:Real}(A::AbstractArray{T}) = A
 
 end # of module Helpers

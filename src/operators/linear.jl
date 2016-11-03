@@ -69,6 +69,6 @@ function evaluate{C<:FunctionCoefficient}(fnc::Functional{C,id}, d::Integer)
     points = qpoints(fnc.quadrule, d)
     c = evaluate(coeff(fnc), points, mesh(space(fnc)))
     basis = evalBasis(element(space(fnc)), points, 0)
-    return c, basis
+    return ndarray(c), basis
 end
 

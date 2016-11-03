@@ -15,7 +15,7 @@ end
 
 # Outer Constructors
 # -------------------
-function Operator{C<:AbsCoeff,U<:AbsOp,V<:AbsOp}(::Type{U}, ::Type{V}, fes::FESpace, coeff::C)
+function Operator{U<:AbsOp,V<:AbsOp,C<:AbsCoeff}(::Type{U}, ::Type{V}, fes::FESpace, coeff::C)
     if issubtype(type_(fes.element), PElement)
         qrule = QuadRuleSimp2()
     else
@@ -35,6 +35,10 @@ end
     
 function Operator{U<:AbsOp,V<:AbsOp,T<:AbstractMatrix}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
     return Operator(U, V, fes, MatrixCoefficient(coeff))
+end
+
+function Operator{U<:AbsOp,V<:AbsOp,T<:Function}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
+    return Operator(U, V, fes, FunctionCoefficient(coeff))
 end
 
 # Associated methods
@@ -75,6 +79,34 @@ function evaluate{C<:ConstantCoefficient}(op::Operator{C,Grad,Grad}, d::Integer)
     points = qpoints(op.quadrule, d)
 
     c = value(eltype(points), coeff(op))
+    
+    dbasis = evalBasis(element(space(op)), points, 1)
+    invdphi = evalJacobianInverse(mesh(space(op)), points)
+
+    nE, nP, nW, nD = size(invdphi)
+    nB, nP, nW = size(dbasis)
+
+    grad = zeros(eltype(points), nE, nB, nP, nW)
+
+    for jd = 1:nW
+        for id = 1:nW
+            for ip = 1:nP
+                for ib = 1:nB
+                    for ie = 1:nE
+                        grad[ie,ib,ip,id] += invdphi[ie,ip,jd,id] * dbasis[ib,ip,id]
+                    end
+                end
+            end
+        end
+    end
+
+    return c, grad, grad
+end
+
+function evaluate{C<:FunctionCoefficient}(op::Operator{C,Grad,Grad}, d::Integer)
+    points = qpoints(op.quadrule, d)
+
+    c = ndarray(evaluate(coeff(op), points, mesh(space(op))))
     
     dbasis = evalBasis(element(space(op)), points, 1)
     invdphi = evalJacobianInverse(mesh(space(op)), points)

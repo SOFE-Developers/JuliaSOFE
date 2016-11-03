@@ -6,6 +6,7 @@ using ..Elements
 using ..Meshes
 using ..Spaces
 using ..Quadrature
+using ..Helpers
 
 export AbstractCoefficient, ConstantCoefficient, ScalarCoefficient,
     VectorCoefficient, MatrixCoefficient, FunctionCoefficient
