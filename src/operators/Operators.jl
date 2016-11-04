@@ -8,10 +8,8 @@ using ..Spaces
 using ..Quadrature
 using ..Helpers
 
-export AbstractCoefficient, ConstantCoefficient, ScalarCoefficient,
-    VectorCoefficient, MatrixCoefficient, FunctionCoefficient
-export value, evaluate
-export AbstractOperator, coeff, space, matrix, vector, assemble!
+export AbstractOperator
+export space, coeff, matrix, vector, assemble!
 export Operator, IdId, GradGrad
 export Functional, Id
 

@@ -1,12 +1,44 @@
+# EXPORTS
+export AbstractCoefficient
+export ConstantCoefficient, ScalarCoefficient, VectorCoefficient, MatrixCoefficient,
+export FunctionCoefficient
+export value, func, evaluate
+
 #-------------------#
 # Coefficient Types #
 #-------------------#
+"""
+Abstract base type for all operator coefficients. 
+"""
 abstract AbstractCoefficient
+
+# Associated Methods
+# -------------------
+"""
+    evaluate{T<:Float}(coeff::AbstractCoefficient, points::AbstractArray{T})
+
+  Evaluate the coefficient `coeff` in given (global) `points`.
+"""
+function evaluate{T<:Float}(coeff::AbstractCoefficient, points::AbstractArray{T,2})
+end
+
+"""
+    evaluate{T<:Float}(coeff::AbstractCoefficient, points::AbstractArray{T}, m::Mesh)
+
+  Evaluate the coefficient `coeff` in global points of the mesh `m` 
+  resulting from the evaluation of its referefence maps in given local `points`.
+"""
+function evaluate{T<:Float}(coeff::AbstractCoefficient, points::AbstractArray{T,2}, m::Mesh)
+end
 
 #--------------------------#
 # Type ConstantCoefficient #
 #--------------------------#
 typealias ConstType Union{Real, AbstractVector, AbstractArray}
+
+"""
+Type for constant coefficients such as scalars, vectors or matrices.
+"""
 type ConstantCoefficient{T<:ConstType} <: AbstractCoefficient
     value :: T
 end
@@ -43,11 +75,11 @@ function (c::ConstantCoefficient)(x)
     return value(eltype(x), c)
 end
 
-function evaluate{T<:Float,C<:ConstantCoefficient}(c::C, m::Mesh, points::AbstractArray{T,2})
+function evaluate{T<:Float,C<:ConstantCoefficient}(c::C, points::AbstractArray{T,2}, m::Mesh)
     P = evalReferenceMaps(m, points)
     nE, nP, nW = size(P)
 
-    val = value(c)
+    val = value(T, c)
     R = zeros(T, nE, nP, size(val)...)
     for ip = 1:nP
         for ie = 1:nE
@@ -57,17 +89,38 @@ function evaluate{T<:Float,C<:ConstantCoefficient}(c::C, m::Mesh, points::Abstra
     return R
 end
 
+function evaluate{T<:Float,C<:ConstantCoefficient}(c::C, points::AbstractArray{T,2})
+    nP, nW = size(points)
+    val = value(T, c)
+    R = zeros(T, nP, size(val)...)
+    for ip = 1:nP
+        R[ip,:] = val
+    end
+    return R
+end
+
 #--------------------------#
 # Type FunctionCoefficient #
 #--------------------------#
+"""
+Type for non-constant callable coefficients.
+"""
 type FunctionCoefficient{T<:Function} <: AbstractCoefficient
     func :: T
 end
 
 # Associated Methods
 # -------------------
+"""
+
+    func(f::FunctionCoefficient)
+
+  Return the callable function instance of the coefficient `f`.
+"""
+@inline func(f::FunctionCoefficient) = getfield(f, :func)
+    
 function (f::FunctionCoefficient){T<:Real}(xs::T...)
-    return getfield(f, :func)(xs...)
+    return func(fc)(xs...)
 end
 (f::FunctionCoefficient){T<:Real}(x::AbstractVector{T}) = f(x...)
 function (f::FunctionCoefficient){T<:Real}(X::AbstractArray{T,2})
@@ -87,6 +140,7 @@ function evaluate{F<:FunctionCoefficient,T<:Float}(f::F, points::AbstractArray{T
     nF = size(R, (2,(3:ndims(R))...)...)
     R = (nF == 1) ? reshape(R, nE, nP) : reshape(R, nE, nP, nF...)
 
-    return R
+    #return R
+    return ndarray(R)
 end
 

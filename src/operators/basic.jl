@@ -1,3 +1,6 @@
+# EXPORTS
+export ScalarOperator, VectorOperator, MatrixOperator
+
 abstract ScalarOperator <: AbstractOperator
 abstract VectorOperator <: AbstractOperator
 abstract MatrixOperator <: AbstractOperator

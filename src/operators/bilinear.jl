@@ -1,3 +1,12 @@
+# EXPORTS
+export BilinearOperator, Operator
+export idid
+export GradGrad
+export matrix, matrix!, getMatrix, setMatrix!, evaluate
+
+#-------------------------#
+# Bilinear Operator Types #
+#-------------------------#
 abstract BilinearOperator <: AbstractOperator
 
 typealias AbsOp AbstractOperator
@@ -54,9 +63,9 @@ end
 @inline matrix!{T<:BilinearOperator}(a::T, A::SparseMatrixCSC) = setfield!(a, :matrix, A)
 @inline setMatrix!{T<:BilinearOperator}(a::T, A::SparseMatrixCSC) = matrix!(a, A)
 
-#-----------#
-# Type idid #
-#-----------#
+#-------------------------#
+# L2 Scalar Product Types #
+#-------------------------#
 type idid <: BilinearOperator
 end
 idid(fes::FESpace, coeff) = Operator(id, id, fes, coeff)
@@ -68,9 +77,9 @@ function evaluate{C<:ConstantCoefficient}(op::Operator{C,id,id}, d::Integer)
     return c, basis, basis
 end
 
-#---------------#
-# Type GradGrad #
-#---------------#
+#-----------------#
+# Diffusion Types #
+#-----------------#
 type GradGrad <: BilinearOperator
 end
 GradGrad(fes, coeff) = Operator(Grad, Grad, fes, coeff)
@@ -131,78 +140,3 @@ function evaluate{C<:FunctionCoefficient}(op::Operator{C,Grad,Grad}, d::Integer)
     return c, grad, grad
 end
 
-# Non-Constant Coefficients
-function fill_data_op_op!{T<:Real}(E::AbstractArray{T,3},
-                                   C::AbstractArray{T,2}, U::AbstractArray{T,2}, V::AbstractArray{T,2},
-                                   w::AbstractArray{T,1}, D::AbstractArray{T,2})
-    nE, nBi, nBj = size(E)
-    for jb = 1:nBj
-        for ib = 1:nBi
-            for ie = 1:nE
-                for ip = 1:nP
-                    E[ie,ib,jb] += C[ie,ip] * U[jb,ip] * V[ib,ip] * w[ip] * D[ie,ip]
-                end
-            end
-        end
-    end
-    return nothing
-end
-
-function fill_data_Op_Op!{T<:Real}(E::AbstractArray{T,3},
-                                   C::AbstractArray{T,2}, U::AbstractArray{T,4}, V::AbstractArray{T,4},
-                                   w::AbstractArray{T,1}, D::AbstractArray{T,2})
-    nE, nBi, nBj = size(E)
-    nE, nB, nP, nW = size(U)
-    for jb = 1:nBj
-        for ib = 1:nBi
-            for ie = 1:nE
-                for ip = 1:nP
-                    for id = 1:nW
-                        E[ie,ib,jb] += C[ie,ip] * U[ie,jb,ip,id] * V[ie,ib,ip,id] * w[ip] * D[ie,ip]
-                    end
-                end
-            end
-        end
-    end
-    return nothing
-end
-
-function fill_Data_Op_op!{T<:Real}(E::AbstractArray{T,3},
-                                   C::AbstractArray{T,3}, U::AbstractArray{T,4}, V::AbstractArray{T,2},
-                                   w::AbstractArray{T,1}, D::AbstractArray{T,2})
-    nE, nBi, nBj = size(E)
-    nE, nB, nP, nW = size(U)
-    for jb = 1:nBj
-        for ib = 1:nBi
-            for ie = 1:nE
-                for ip = 1:nP
-                    for id = 1:nW
-                        E[ie,ib,jb] += C[ie,ip,id] * U[ie,jb,ip,id] * V[ib,ip] * w[ip] * D[ie,ip]
-                    end
-                end
-            end
-        end
-    end
-    return nothing
-end
-
-function fill_DATA_Op_Op!{T<:Real}(E::AbstractArray{T,3},
-                                   C::AbstractArray{T,4}, U::AbstractArray{T,4}, V::AbstractArray{T,4},
-                                   w::AbstractArray{T,1}, D::AbstractArray{T,2})
-    nE, nBi, nBj = size(E)
-    nE, nB, nP, nW = size(U)
-    for jb = 1:nBj
-        for ib = 1:nBi
-            for ie = 1:nE
-                for ip = 1:nP
-                    for jd = 1:nW
-                        for id = 1:nW
-                            E[ie,ib,jb] += C[ie,ip,id,jd] * U[ie,jb,ip,jd] * V[ie,ib,ip,id] * w[ip] * D[ie,ip]
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return nothing
-end
