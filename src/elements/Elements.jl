@@ -67,8 +67,10 @@ end
 @inline nVertices{E<:PElement}(el::Element{E}) = tuple(2:(dimension(el)+1)...)
 @inline nVertices{E<:QElement}(el::Element{E}) = tuple(2.^(1:dimension(el))...)
 
-function nDoF{E<:PElement}(el::Element{E})
-    return map(*, dofTuple(el), binomial(dimension(el)+1, k) for k = 1:dimension(el)+1)
+@inline nDoF(el::AbstractElement) = nDoF(el, dimension(el))
+function nDoF{E<:PElement}(el::Element{E}, d::Integer)
+    #return map(*, dofTuple(el), binomial(dimension(el)+1, k) for k = 1:dimension(el)+1)
+    return map(*, dofTuple(el), binomial(d+1, k) for k = 1:d+1)
 end
 function nDoF{E<:QElement}(el::Element{E})
     if dimension(el) == 1
@@ -81,7 +83,6 @@ function nDoF{E<:QElement}(el::Element{E})
         error("Invalid element dimension ", dimension(el))
     end
 end
-@inline nDoF(el::AbstractElement, d::Integer) = nDoF(el)[d]
 
 """
 
@@ -125,6 +126,7 @@ dofTuple(el::Element{LagrangeP1}) = (1, 0, 0, 0)[1:dimension(el)+1]
 # -------------------
 function evalD0Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,2})
     for ip = 1:size(points, 1)
+        out[1,ip] = one(T)
         for id = 1:size(points, 2)
             out[1,ip] -= points[ip,id]
             out[id+1,ip] = points[ip,id]

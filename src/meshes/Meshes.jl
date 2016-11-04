@@ -50,7 +50,7 @@ end
 
   Return the spatial dimension of the mesh (nodes).
 """
-@inline dimension(m::Mesh) = m.dimension
+@inline dimension(m::Mesh) = getfield(m, :dimension)
 
 """
 
@@ -58,12 +58,15 @@ end
 
   Return the topology of the mesh.
 """
-@inline topology(m::Mesh) = m.topology
+@inline topology(m::Mesh) = getfield(m, :topology)
 
 # Reference Maps
 include("refmaps.jl")
 
-# Data Evaluation
+function evaluate{T<:Float}(m::Mesh, f::Function, points::AbstractArray{T,2})
+    
+end
+
 function evalFunction{T<:Float}(m::Mesh, f::Function, points::AbstractArray{T,2})
     P = evalReferenceMap(m, points) # nExnPxnW
     (nE, nP, nW) = size(P)

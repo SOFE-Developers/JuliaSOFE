@@ -4,7 +4,7 @@ module Quadrature
 
 typealias Float AbstractFloat
 
-export AbstractQuadRule, QuadRule, QuadRuleSimp1
+export AbstractQuadRule, QuadRule, QuadRuleSimp2
 export order, qpoints, qweights, quadData
 
 abstract AbstractQuadRule
@@ -61,21 +61,27 @@ end
 quadData(qr::AbstractQuadRule, d::Integer) = (qr.points[d], qr.weights[d])
 
 #------------#
-# Type Simp1 #
+# Type Simp2 #
 #------------#
-type Simp1 <: AbstractQuadRule
+type Simp2 <: AbstractQuadRule
 end
-typealias QuadRuleSimp1 QuadRule{Simp1}
+typealias QuadRuleSimp2 QuadRule{Simp2}
 
-function QuadRuleSimp1()
-    order = 1
-    points = ([0.0; 1.0],
-              [0.0 0.0; 1.0 0.0; 0.0 1.0],
-              [0.0 0.0 0.0; 1.0 0.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0])
-    weights = ([1.0, 1.0]./6,
-               [1.0, 1.0, 1.0]./6,
-               [1.0, 1.0, 1.0, 1.0]./6)
-    return QuadRule(Simp1, order, points, weights)
+function QuadRuleSimp2()
+    order = 2
+    points = ([0.11270167,  0.5       ,  0.88729833]'',
+              [0.16666667  0.16666667;
+               0.66666667  0.16666667;
+               0.16666667  0.66666667],
+              [0.1381966  0.1381966  0.1381966; 
+               0.5854102  0.1381966  0.1381966;
+               0.1381966  0.5854102  0.1381966;
+               0.1381966  0.1381966  0.5854102])
+    weights = ([0.27777778, 0.44444444, 0.27777778],
+               [0.16666667, 0.16666667, 0.16666667],
+               [0.04166667, 0.04166667, 0.04166667, 0.04166667])
+    
+    return QuadRule(Simp2, order, points, weights)
 end
 
 

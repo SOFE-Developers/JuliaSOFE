@@ -1,16 +1,16 @@
 module Helpers
 
-export tensorprod, lagrangeNodesP
+export tensorprod, lagrangeNodesP, ndarray
 
 function tensorprod{T}(gridx::AbstractArray{T,1}, gridy::AbstractArray{T,1})
-    return hcat([i for i in gridx for j in gridy],
-                [j for i in gridx for j in gridy])
+    return hcat([j for i in gridx for j in gridy],
+                [i for i in gridx for j in gridy])
 end
 
 function tensorprod{T}(gridx::AbstractArray{T,1}, gridy::AbstractArray{T,1}, gridz::AbstractArray{T,1})
-    return hcat([i for i in gridx for j in gridy for k in gridz],
+    return hcat([k for i in gridx for j in gridy for k in gridz],
                 [j for i in gridx for j in gridy for k in gridz],
-                [k for i in gridx for j in gridy for k in gridz])
+                [i for i in gridx for j in gridy for k in gridz])
 end
 
 """
@@ -63,5 +63,25 @@ function lagrangeNodesP(d::Integer, p::Integer)
         end
     end
 end
+
+#function ndarray{T<:Real}(A::AbstractArray{AbstractArray{T}})
+function ndarray{T<:AbstractArray}(A::AbstractArray{T})
+    sza = size(A)
+    sza1 = size(A[1])
+    szb = tuple(sza..., sza1...)
+    #B = Array{T}(szb...)
+    B = Array{eltype(A[1])}(szb...)
+
+    for i in eachindex(A)
+        ii = ind2sub(sza, i)
+        for j in eachindex(A[i])
+            k = tuple(ii..., ind2sub(sza1, j)...)
+            B[k...] = A[i][j]
+        end
+    end
+
+    return B
+end
+ndarray{T<:Real}(A::AbstractArray{T}) = A
 
 end # of module Helpers

@@ -31,8 +31,8 @@ function evalReferenceMaps{T<:Float}(m::Mesh, points::AbstractArray{T,2}, deriv:
     return R
 end
 
-function fill_RefMaps!{T<:Float}(R::Array{T,3}, nodes::Array{T,2},
-                                 elems::Array{Int,2}, basis::Array{T,2})
+@noinline function fill_RefMaps!{T<:Float}(R::Array{T,3}, nodes::Array{T,2},
+                                           elems::Array{Int,2}, basis::Array{T,2})
     for iw = 1:size(R,3) # nW
         for ip = 1:size(R,2) # nP
             for ie = 1:size(R,1) # nE
@@ -44,8 +44,8 @@ function fill_RefMaps!{T<:Float}(R::Array{T,3}, nodes::Array{T,2},
     end
 end
 
-function fill_RefMaps!{T<:Float}(R::Array{T,4}, nodes::Array{T,2},
-                                 elems::Array{Int,2}, basis::Array{T,3})
+@noinline function fill_RefMaps!{T<:Float}(R::Array{T,4}, nodes::Array{T,2},
+                                           elems::Array{Int,2}, basis::Array{T,3})
     for id = 1:size(R,4) # nD
         for iw = 1:size(R,3) # nW
             for ip = 1:size(R,2) # nP
@@ -59,8 +59,8 @@ function fill_RefMaps!{T<:Float}(R::Array{T,4}, nodes::Array{T,2},
     end
 end
 
-function fill_RefMaps!{T<:Float}(R::Array{T,5}, nodes::Array{T,2},
-                                 elems::Array{Int,2}, basis::Array{T,4})
+@noinline function fill_RefMaps!{T<:Float}(R::Array{T,5}, nodes::Array{T,2},
+                                           elems::Array{Int,2}, basis::Array{T,4})
     for jd = 1:size(R,5) # nD
         for id = 1:size(R,4) # nD
             for iw = 1:size(R,3) # nW

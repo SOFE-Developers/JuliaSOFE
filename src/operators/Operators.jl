@@ -6,171 +6,116 @@ using ..Elements
 using ..Meshes
 using ..Spaces
 using ..Quadrature
+using ..Helpers
 
-export AbstractOperator, Operator, IdId, GradGrad, Id
-export coeff, space, matrix, assemble!
+export AbstractOperator
+export space, coeff, matrix, vector, assemble, assemble!
+export Operator, IdId, GradGrad
+export Functional, Id
 
 typealias Float AbstractFloat
 
+include("coefficients.jl")
+
+#--------------------#
+# Abstract Operators #
+#--------------------#
 abstract AbstractOperator
-abstract BilinearOperator <: AbstractOperator
-abstract LinearOperator <: AbstractOperator
 
-#---------------#
-# Type Operator #
-#---------------#
-type Operator{O<:AbstractOperator} <: AbstractOperator
-    fes :: FESpace
-    coeff :: Function
-    matrix :: AbstractArray
-    quadrule :: QuadRule
-end
-function Operator{O<:AbstractOperator}(::Type{O}, fes::FESpace, coeff::Function)
-    if issubtype(type_(fes.element), PElement)
-        qrule = QuadRuleSimp1()
-    else
-        error("Currently only simplical elements supported...")
-    end
+include("basic.jl")
 
-    return Operator{O}(fes, coeff, [], qrule)
-end
-function Operator{O<:AbstractOperator, T<:Real}(::Type{O}, fes::FESpace, coeff::T)
-    return Operator(O, fes,
-                    x->convert(coeff, typeof(x)) * ones(typeof(x), size(x,1)))
-end
+# General Operator Methods
+"""
 
-# Associated Methods
-# -------------------
-@inline coeff(op::Operator) = op.coeff
-@inline space(op::Operator) = op.fes
-@inline matrix(op::Operator) = op.matrix
-@inline getCoefficient(op::Operator) = coeff(op)
-@inline getFESpace(op::Operator) = space(op)
-@inline getMatrix(op::Operator) = matrix(op)
-function setMatrix!{T<:Float}(op::Operator, M::AbstractArray{T,2})
-    op.matrix = M;
-end
+    space(op::AbstractOperator)
 
-#-----------#
-# Type IdId #
-#-----------#
-type IdId <: BilinearOperator
-    IdId(fes::FESpace, coeff) = Operator(IdId, fes, coeff)
-end
+  Return the finite element space of the operator `op`.
+"""
+@inline space{T<:AbstractOperator}(op::T) = getfield(op, :fes)
+@inline getFESpace{T<:AbstractOperator}(op::T) = space(op)
 
-function assemble!(op::Operator{IdId}, d::Integer)
-    fes = space(op)
+"""
+
+    coeff(op::AbstractOperator)
+
+  Return the coefficient of the operator `op`.
+"""
+@inline coeff{T<:AbstractOperator}(op::T) = getfield(op, :coeff)
+@inline getCoefficient{T<:AbstractOperator}(op::T) = coeff(op)
+
+# Includes
+include("bilinear.jl")
+include("linear.jl")
+
+#---------------------#
+# Assembling Routines #
+#---------------------#
+assemble(op::AbstractOperator) = assemble(op, dimension(mesh(space(op))))
+assemble!(op::AbstractOperator) = assemble!(op, dimension(mesh(space(op))))
+assemble!(op::Operator, d::Integer) = matrix!(op, assemble(op, d))
+assemble!(fnc::Functional, d::Integer) = vector!(fnc, assemble(fnc, d))
+
+function assemble(op::Operator, d::Integer)
     qpoints, qweights = quadData(op.quadrule, d)
-    #C = evalFunction(fes.mesh, coeff(fes), qpoints)
+    
+    fes = space(op)
+    dMap = dofMap(fes, d)
+    ndof = nDoF(fes)
+    
+    nB, nE = size(dMap)
+    nP, nD = size(qpoints)
+
+    dofI = zeros(Int, nE, nB, nB)
+    dofJ = zeros(Int, nE, nB, nB)
+
+    for jb = 1:nB
+        for ib = 1:nB
+            for ie = 1:nE
+                dofI[ie,ib,jb] = dMap[ib,ie]
+                dofJ[ie,ib,jb] = dMap[jb,ie]
+            end
+        end
+    end
+    
+    C, U, V = evaluate(op, d)
+    Det = abs(evalJacobianDeterminat(fes.mesh, qpoints))
+    
+    entries = zeros(eltype(qpoints), nE, nB, nB)
+    fill_entries!(op, entries, C, U, V, qweights, Det)
+
+    A = sparse(dofI[:], dofJ[:], entries[:], ndof, ndof)
+    return A
+end
+
+function assemble(fnc::Functional, d::Integer)
+    qpoints, qweights = quadData(fnc.quadrule, d)
+
+    fes = space(fnc)
     dMap = dofMap(fes, d)
     ndof = Spaces.nDoF(fes)
-    jdet = evalJacobianDeterminat(fes.mesh, points)
-    basis = evalBasis(fes.element, points, 0)
 
     nB, nE = size(dMap)
     nP, nD = size(qpoints)
 
-    C = ones(nE,nP)
-    
-    entries = zeros(eltype(qpoints), nE, nB, nB)
-    dofI = zeros(Int, nE, nB, nB)
-    dofJ = zeros(Int, nE, nB, nB)
-
-    for jb = 1:nB
-        for ib = 1:nB
-            for ie = 1:nE
-                dofI[ie,ib,jb] = dMap[ib,ie]
-                dofJ[ie,ib,jb] = dMap[jb,ie]
-                for ip = 1:nP
-                    entries[ie,ib,jb] += C[ie,ip] * basis[jb,ip] * basis[ib,ip] * qweights[ip] * jdet[ie,ip]
-                end
-            end
-        end
-    end
-
-    M = sparse(dofI[:], dofJ[:], entries[:], ndof, ndof)
-    setMatrix!(op, M)
-end
-
-#---------------#
-# Type GradGrad #
-#---------------#
-type GradGrad <: BilinearOperator
-end
-GradGrad(coeff, fes) = Operator(GradGrad, coeff, fes)
-
-function assemble!(op::Operator{GradGrad})
-    fes = space(op)
-    qpoints, qweights = quadData(fes, dim(fes.mesh))
-    C = evalFunction(fes.mesh, coeff(fes), qpoints)
-    dMap = dofMap(fes, dim(fes.mesh))
-    ndof = nDoF(fes)
-    DPhi = evalReferenceMaps(fes.mesh, qpoints, 1)
-    jdet = evalJacobianDeterminat(fes.mesh, qpoints)
-
-    dbasis = evalBasis(fes.element, points, 1)
-
-    nB, nE = size(dMap)
-    nP, nD = size(qpoints)
-
-    entries = zeros(eltype(qpoints), nE, nB, nB)
-    dofI = zeros(Int, nE, nB, nB)
-    dofJ = zeros(Int, nE, nB, nB)
-
-    error("Not Implemented yet...")
-    
-    for jb = 1:nB
-        for ib = 1:nB
-            for ie = 1:nE
-                dofI[ie,ib,jb] = dMap[ib,ie]
-                dofJ[ie,ib,jb] = dMap[jb,ie]
-                for ip = 1:nP
-                    dphi = DPhi[ie,ip,:,:]
-                    grad = dphi'\hcat(dbasis[ib,ip,:], dbasis[jb,ip,:])
-                    entries[ie,ib,jb] += C[ie,ip] * basis[jb,ip] * basis[ib,ip] * qweights[ip] * jdet[ie,ip]
-                end
-            end
-        end
-    end
-
-    M = sparse(dofI[:], dofJ[:], entries[:], ndof, ndof)
-    setMatrix!(op, M)
-end
-
-#-----------#
-# Type IdId #
-#-----------#
-type Id <: LinearOperator
-end
-Id(coeff, fes) = Operator(Id, coeff, fes)
-
-function assemble!(op::Operator{Id}, d::Integer)
-    fes = space(op)
-    qpoints, qweights = quadData(fes, d)
-    C = evalFunction(fes.mesh, coeff(fes), qpoints)
-    dMap = dofMap(fes, d)
-    ndof = nDoF(fes)
-    jdet = evalJacobianDeterminat(fes.mesh, points)
-    basis = evalBasis(fes.element, points, 0)
-
-    nB, nE = size(dMap)
-    nP, nD = size(qpoints)
-
-    entries = zeros(eltype(qpoints), nE, nB)
     dofI = zeros(Int, nE, nB)
-
+    
     for ib = 1:nB
         for ie = 1:nE
             dofI[ie,ib] = dMap[ib,ie]
-            for ip = 1:nP
-                entries[ie,ib] += C[ie,ip] * basis[ib,ip] * qweights[ip] * jdet[ie,ip]
-            end
         end
     end
+    
+    C, V = evaluate(fnc, d)
+    Det = abs(evalJacobianDeterminat(fes.mesh, qpoints))
+    
+    entries = zeros(eltype(qpoints), nE, nB)
+    fill_entries!(fnc, entries, C, V, qweights, Det)
 
-    F = sparsevec(dofI[:], entries[:], ndof)
-    setMatrix!(op, F)
+    L = sparsevec(dofI[:], entries[:], ndof)
+    return full(L)
 end
+
+include("entries.jl")
 
 end # of module Operators
 

@@ -8,7 +8,7 @@ using ..Elements
 using ..Meshes
 
 export AbstractFESpace, FESpace
-export dofMap, nDoF, dofIndices, dofMask, extractDoFs, interpolate
+export mesh, element, dofMap, nDoF, dofIndices, dofMask, extractDoFs, interpolate
 
 abstract AbstractFESpace
 
@@ -33,6 +33,9 @@ end
 
 # Associated Methods
 # -------------------
+@inline mesh(fes::FESpace) = getfield(fes, :mesh)
+@inline element(fes::FESpace) = getfield(fes, :element)
+
 """
 
     dofMap(fes::FESpace, d::Integer)
@@ -47,7 +50,7 @@ end
 """
 function dofMap(fes::FESpace, d::Integer)
     dofTuple = Elements.dofTuple(fes.element)
-    dofPerDim = nDoF(fes.element)
+    dofPerDim = nDoF(fes.element, d)
     nEntities = [getNumber(fes.mesh.topology, dd) for dd = 0:d]
     dofsNeeded = [nEntities[dd+1] * dofTuple[dd+1] for dd = 0:d]
     ndofs = [0, cumsum(dofsNeeded)...]
@@ -91,7 +94,8 @@ end
   finite element space `fes`.
 """
 function nDoF(fes::FESpace)
-    return maxabs(getDOFMap(fes, fes.mesh.dimension))
+    #return maxabs(getDOFMap(fes, fes.mesh.dimension))
+    return maxabs(dofMap(fes, fes.mesh.dimension))
 end
 
 """
