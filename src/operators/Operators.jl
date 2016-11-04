@@ -9,7 +9,7 @@ using ..Quadrature
 using ..Helpers
 
 export AbstractOperator
-export space, coeff, matrix, vector, assemble!
+export space, coeff, matrix, vector, assemble, assemble!
 export Operator, IdId, GradGrad
 export Functional, Id
 
@@ -50,9 +50,12 @@ include("linear.jl")
 #---------------------#
 # Assembling Routines #
 #---------------------#
+assemble(op::AbstractOperator) = assemble(op, dimension(mesh(space(op))))
 assemble!(op::AbstractOperator) = assemble!(op, dimension(mesh(space(op))))
+assemble!(op::Operator, d::Integer) = matrix!(op, assemble(op, d))
+assemble!(fnc::Functional, d::Integer) = vector!(fnc, assemble(fnc, d))
 
-function assemble!(op::Operator, d::Integer)
+function assemble(op::Operator, d::Integer)
     qpoints, qweights = quadData(op.quadrule, d)
     
     fes = space(op)
@@ -81,10 +84,10 @@ function assemble!(op::Operator, d::Integer)
     fill_entries!(op, entries, C, U, V, qweights, Det)
 
     A = sparse(dofI[:], dofJ[:], entries[:], ndof, ndof)
-    matrix!(op, A)
+    return A
 end
 
-function assemble!(fnc::Functional, d::Integer)
+function assemble(fnc::Functional, d::Integer)
     qpoints, qweights = quadData(fnc.quadrule, d)
 
     fes = space(fnc)
@@ -109,7 +112,7 @@ function assemble!(fnc::Functional, d::Integer)
     fill_entries!(fnc, entries, C, V, qweights, Det)
 
     L = sparsevec(dofI[:], entries[:], ndof)
-    vector!(fnc, full(L))
+    return full(L)
 end
 
 include("entries.jl")

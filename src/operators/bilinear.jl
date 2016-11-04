@@ -77,6 +77,13 @@ function evaluate{C<:ConstantCoefficient}(op::Operator{C,id,id}, d::Integer)
     return c, basis, basis
 end
 
+function evaluate{C<:FunctionCoefficient}(op::Operator{C,id,id}, d::Integer)
+    points = qpoints(op.quadrule, d)
+    c = evaluate(coeff(op), points, mesh(space(op)))
+    basis = evalBasis(element(space(op)), points, 0)
+    return c, basis, basis
+end
+
 #-----------------#
 # Diffusion Types #
 #-----------------#
@@ -88,6 +95,7 @@ function evaluate{C<:ConstantCoefficient}(op::Operator{C,Grad,Grad}, d::Integer)
     points = qpoints(op.quadrule, d)
 
     c = value(eltype(points), coeff(op))
+    #c = evaluate(coeff(op), points, mesh(space(op)))
     
     dbasis = evalBasis(element(space(op)), points, 1)
     invdphi = evalJacobianInverse(mesh(space(op)), points)
@@ -115,7 +123,7 @@ end
 function evaluate{C<:FunctionCoefficient}(op::Operator{C,Grad,Grad}, d::Integer)
     points = qpoints(op.quadrule, d)
 
-    c = ndarray(evaluate(coeff(op), points, mesh(space(op))))
+    c = evaluate(coeff(op), points, mesh(space(op)))
     
     dbasis = evalBasis(element(space(op)), points, 1)
     invdphi = evalJacobianInverse(mesh(space(op)), points)

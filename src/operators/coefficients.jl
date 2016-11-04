@@ -1,6 +1,6 @@
 # EXPORTS
 export AbstractCoefficient
-export ConstantCoefficient, ScalarCoefficient, VectorCoefficient, MatrixCoefficient,
+export ConstantCoefficient, ScalarCoefficient, VectorCoefficient, MatrixCoefficient
 export FunctionCoefficient
 export value, func, evaluate
 
@@ -120,7 +120,7 @@ end
 @inline func(f::FunctionCoefficient) = getfield(f, :func)
     
 function (f::FunctionCoefficient){T<:Real}(xs::T...)
-    return func(fc)(xs...)
+    return func(f)(xs...)
 end
 (f::FunctionCoefficient){T<:Real}(x::AbstractVector{T}) = f(x...)
 function (f::FunctionCoefficient){T<:Real}(X::AbstractArray{T,2})
