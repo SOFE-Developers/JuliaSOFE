@@ -1,5 +1,9 @@
 import Combinatorics: combinations
 
+export MeshTopologyGeneric
+export init!, connectivity!, connectivity
+export build!, build, transpose!, transpose, intersection!, intersection
+
 include("connectivity.jl")
 
 #--------------------------#
@@ -105,7 +109,7 @@ end
 
 """
 
-    connectivity!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+    connectivity(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
 
   Compute the incidence relation `d -> dd` by successive application
   of `build`, `transpose` and `intersection`.
@@ -114,21 +118,30 @@ function connectivity!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     d  != 0 && (haskey(mt.connectivities, (d, 0)) || build!(mt, d))
     dd != 0 && (haskey(mt.connectivities, (dd,0)) || build!(mt, dd))
     
-    if haskey(mt.connectivities, (d,dd))
-        return
+    if !haskey(mt.connectivities, (d,dd))
+        if d < dd
+            connectivity!(mt, dd, d)
+            transpose!(mt, dd, d)
+        else
+            D = mt.dimension
+            ddd = (d == 0 && dd == 0) ? D : 0
+            
+            connectivity!(mt, d, ddd)
+            connectivity!(mt, ddd, dd)
+            intersection!(mt, d, dd, ddd)
+        end
     end
 
-    if d < dd
-        connectivity!(mt, dd, d)
-        transpose!(mt, dd, d)
-    else
-        D = mt.dimension
-        ddd = (d == 0 && dd == 0) ? D : 0
-
-        connectivity!(mt, d, ddd)
-        connectivity!(mt, ddd, dd)
-        intersection!(mt, d, dd, ddd)
+    return mt.connectivities[(d,dd)]
+end
+function connectivity(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+    prekeys = collect(keys(mt.connectivities))
+    d_dd = connectivity!(mt, d, dd)
+    postkeys = keys(mt.connectivities)
+    for key in setdiff(postkeys, prekeys)
+        delete!(mt.connectivities, key)
     end
+    return d_dd
 end
 
 """
@@ -144,9 +157,11 @@ function build!(mt::MeshTopologyGeneric, d::Integer)
     @assert 0 < d < D "0 < (d = $d) < D = $D"
     
     # compute the set of vertex sets for each cell
-    V = vertex_sets(mt, d)
+    print("vertex_sets: ")
+    @time V = vertex_sets(mt, d)
 
-    D_D = getConnectivity(mt, D, D)
+    print("connect_D_D: ")
+    @time D_D = connectivity!(mt, D, D)
     
     # initialize index vectors for new connectivities
     # 'D -> d' and 'd -> 0'
@@ -190,6 +205,15 @@ function build!(mt::MeshTopologyGeneric, d::Integer)
     mt.connectivities[(D,d)] = MeshConnectivity(D, d, vcat(ind_D_d...), off_D_d)
     mt.connectivities[(d,0)] = MeshConnectivity(d, 0, vcat(ind_d_0...), off_d_0)
 end
+function build(mt::MeshTopologyGeneric, d::Integer)
+    prekeys = collect(keys(mt.connectivities))
+    d_0 = build!(mt, d)
+    postkeys = keys(mt.connectivities)
+    for key in setdiff(postkeys, prekeys)
+        delete!(mt.connectivities, key)
+    end
+    return d_0
+end
 
 """
 
@@ -219,11 +243,20 @@ end
 
 #     mt.connectivities[(dd,d)] = MeshConnectivity(dd, d, vcat(ind_dd_d...), off)
 # end
+function transpose(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+    prekeys = collect(keys(mt.connectivities))
+    dd_d = transpose!(mt, d, dd)
+    postkeys = keys(mt.connectivities)
+    for key in setdiff(postkeys, prekeys)
+        delete!(mt.connectivities, key)
+    end
+    return dd_d
+end
 
 function ntranspose(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     @assert d > dd
     # get connectivity d -> dd
-    connect_d_dd = getConnectivity(mt, d, dd)
+    connect_d_dd = connectivity!(mt, d, dd)
 
     I, J = findn(connect_d_dd)
 
@@ -249,7 +282,7 @@ end
 function transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     @assert d > dd
     # get connectivity d -> dd
-    connect_d_dd = getConnectivity(mt, d, dd)
+    connect_d_dd = connectivity!(mt, d, dd)
 
     # initialize offsets vectors for new connectivity 'dd -> d'
     nentities_dd = maximum(connect_d_dd.indices)
@@ -266,8 +299,8 @@ function transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     # fill indices vector
     fill_transpose!(ind_dd_d, len_dd_d, off_dd_d, connect_d_dd)
     
-    #mt.connectivities[(dd,d)] = MeshConnectivity(dd, d, ind_dd_d, off_dd_d)
-    return MeshConnectivity(dd, d, ind_dd_d, off_dd_d)
+    mt.connectivities[(dd,d)] = MeshConnectivity(dd, d, ind_dd_d, off_dd_d)
+    #return MeshConnectivity(dd, d, ind_dd_d, off_dd_d)
 end
 
 @noinline function fill_offsets!(off::Array{Int,1}, connect::MeshConnectivity)
@@ -336,24 +369,31 @@ end
 
 #     mt.connectivities[(d,dd)] = MeshConnectivity(d, dd, vcat(ind_d_dd...), off)
 # end
+function intersection(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
+    prekeys = collect(keys(mt.connectivities))
+    d_dd = intersection!(mt, d, dd, ddd)
+    postkeys = keys(mt.connectivities)
+    for key in setdiff(postkeys, prekeys)
+        delete!(mt.connectivities, key)
+    end
+    return d_dd
+end
 
 function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
     @assert d >= d
-    d_ddd  = getConnectivity(mt, d,   ddd)
-    ddd_dd = getConnectivity(mt, ddd, dd)
-    c_ddd_dd = collect(ddd_dd)
+    d_ddd  = connectivity!(mt, d,   ddd)
+    ddd_dd = connectivity!(mt, ddd, dd)
 
     # initialize indices vector for new connectivity 'd -> dd'
-    nentities_d = length(d_ddd.offsets) - 1
-    ind_d_dd = [Array{Int,1}() for i = 1:nentities_d]
+    ind_d_dd = [Array{Int,1}() for i = 1:size(d_ddd, 1)]
     
     if d == dd
-        @time fill_intersection!(ind_d_dd, d_ddd, c_ddd_dd)
+        @time fill_intersection!(ind_d_dd, d_ddd, ddd_dd)
     elseif d > dd
-        c_d_0  = collect(getConnectivity(mt, d,   0))
-        c_dd_0 = collect(getConnectivity(mt, dd,  0))
+        d_0  = connectivity!(mt, d,   0)
+        dd_0 = connectivity!(mt, dd,  0)
 
-        fill_intersection!(ind_d_dd, d_ddd, c_ddd_dd, c_d_0, c_dd_0)
+        fill_intersection!(ind_d_dd, d_ddd, ddd_dd, d_0, dd_0)
     end
 
     # compute offsets
@@ -363,7 +403,7 @@ function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::In
 end
 
 @noinline function fill_intersection!(d_dd::Array{Array{Int,1},1},
-                            d_ddd::MeshConnectivity, ddd_dd::Array{Array{Int,1},1})
+                                      d_ddd::MeshConnectivity, ddd_dd::MeshConnectivity)
     for (i, d_ddd_i) in enumerate(d_ddd)
         for k in d_ddd_i
             for j in ddd_dd[k]
@@ -379,8 +419,8 @@ end
 end
 
 @noinline function fill_intersection!(d_dd::Array{Array{Int,1},1},
-                            d_ddd::MeshConnectivity, ddd_dd::Array{Array{Int,1},1},
-                            d_0::Array{Array{Int,1},1}, dd_0::Array{Array{Int,1},1})
+                            d_ddd::MeshConnectivity, ddd_dd::MeshConnectivity,
+                            d_0::MeshConnectivity, dd_0::MeshConnectivity)
     for (i, d_ddd_i) in enumerate(d_ddd)
         for k in d_ddd_i
             for j in ddd_dd[k]
@@ -406,20 +446,17 @@ function vertex_sets(mt::MeshTopologyGeneric, d::Integer, sorted::Bool=true)
     D = mt.dimension
     D_0 = getConnectivity(mt, D, 0)
 
-    ncells = length(D_0.offsets) - 1
-    combs = combinations(1:Int(D+1), Int(d+1))
+    ncells = size(D_0, 1)
+    nverts = d+1
+    combs = collect(combinations(1:D+1, nverts))
+    ncombs = size(combs, 1)
 
-    V = [Array{Array{Int,1},1}() for i in 1:ncells]
-    for (i, D_0_i) in enumerate(D_0)
-        for comb in combs
-            if sorted
-                push!(V[i], sort([D_0_i[j] for j in comb]))
-            else
-                push!(V[i], [D_0_i[j] for j in comb])
-            end
+    V = Array{Int}(ncells, ncombs, nverts)
+    for j = 1:ncombs
+        for i = 1:ncells
+            V[i,j,:] = D_0[i,combs[j]]
         end
     end
-
     return V
 end
 
