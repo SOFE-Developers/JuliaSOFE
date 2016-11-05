@@ -4,6 +4,17 @@
 """
   Stores the incidence relation 'd -> dd' for a fixed pair
   of topological dimensions '(d,dd)'.
+
+  Common Methods
+  --------------
+
+  * size
+  * nnz
+  * nonzeros
+  * colvals
+  * nzrange
+  * find
+  * findn
 """
 type MeshConnectivity{T<:Integer} <: AbstractSparseMatrix{T,T}
     dims :: Tuple{Int, Int}
@@ -43,9 +54,27 @@ end
 end
 @inline Base.size(mc::MeshConnectivity, d::Integer) = size(mc)[d]
 
-# implement some of the Base.SparseMatrixCSC methods
+#-----------------------#
+# Sparse Matrix Queries #
+#-----------------------#
 Base.nnz(mc::MeshConnectivity) = Int(mc.offsets[end]-1)
+Base.nonzeros(mc::MeshConnectivity) = ones(getfield(mc, :indices))
 
+"""
+
+    colvals(mc::MeshConnectivity)
+
+  Return a vector of the column indices of `mc`. 
+  Any modifications to the returned vector will mutate `mc` as well.
+"""
+colvals(mc::MeshConnectivity) = getfield(mc, :indices)
+
+"""
+    nzrange(mc::MeshConnectivity, row::Integer)
+
+  Return the range of indices to the structural nonzero entries
+  of the given `row`.
+"""
 Base.nzrange(mc::MeshConnectivity, row::Integer) = mc.offsets[row]:(mc.offsets[row+1]-1)
 
 function Base.find(mc::MeshConnectivity)
@@ -60,9 +89,9 @@ function Base.findn{T}(mc::MeshConnectivity{T})
     J = Array{T}(numnz)
 
     count = 1
-    @inbounds for row = 1:size(mc,1), r = nzrange(mc, row)
+    @inbounds for row = 1:size(mc,1), c in nzrange(mc, row)
         I[count] = row
-        J[count] = mc.indices[r]
+        J[count] = mc.indices[c]
         count += 1
     end
     count -= 1
@@ -70,20 +99,22 @@ function Base.findn{T}(mc::MeshConnectivity{T})
     return (I, J)
 end
 
-# getindex
-Base.getindex(mc::MeshConnectivity, I::Tuple{Integer,Integer}) = getindex(mc, I[1], I[2])
-Base.getindex(mc::MeshConnectivity, i::Integer, ::Colon) = getindex(mc, i, nzrange(mc,i))
-Base.getindex(mc::MeshConnectivity, ::Colon, j::Integer) = getindex(mc, 1:size(mc,1), j)
-
+#-------------#
+# Get Indices #
+#-------------#
+Base.getindex(mc::MeshConnectivity, i::Integer) = mc.indices[nzrange(mc, i)]
+#Base.getindex(mc::MeshConnectivity, i::Integer) = view(mc.indices, nzrange(mc, i))
+Base.getindex(mc::MeshConnectivity, i::Integer, ::Colon) = getindex(mc, i)
 function Base.getindex(mc::MeshConnectivity, i::Integer, j::Integer)
     r1 = Int(mc.offsets[i])
     r2 = Int(mc.offsets[i+1])
-
-    if !(1 <= i <= size(mc,1) && 1 <= j <= r2-r1); throw(BoundsError()); end
-
+    (1 <= i <= size(mc,1)) || throw(BoundsError(mc.offsets[1:end-1], i))
+    (1 <= j <= r2-r1)      || throw(BoundsError(mc.indices[r1:r2-1], j))
     return mc.indices[r1+j-1]
+    #return view(mc.indices, r1+j-1)
 end
-
+Base.getindex(mc::MeshConnectivity, I::Tuple{Integer,Integer}) = getindex(mc, I[1], I[2])
+Base.getindex(mc::MeshConnectivity, ::Colon, j::Integer) = getindex(mc, 1:size(mc,1), j)
 function Base.getindex{T<:Integer}(mc::MeshConnectivity{T}, I::AbstractVector, J::AbstractVector)
     m = size(mc, 1)
     nI = length(I)
@@ -103,8 +134,24 @@ function Base.getindex{T<:Integer}(mc::MeshConnectivity{T}, I::AbstractVector, J
     return C
 end
 
+function Base.getindex(mc::MeshConnectivity, I::AbstractVector, ::Type{Val{true}})
+    return getindex(mc, I, 1:length(nzrange(mc, 1)))
+end
+function Base.getindex(mc::MeshConnectivity, I::AbstractVector, ::Type{Val{false}})
+    return [getindex(mc, i) for i in I]
+end
+Base.getindex(mc::MeshConnectivity, I::AbstractVector) = getindex(mc, I, Val{mc.dims[1]>mc.dims[2]})
+Base.getindex(mc::MeshConnectivity, ::Colon) = getindex(mc, 1:size(mc, 1))
+function Base.getindex(mc::MeshConnectivity, mask::AbstractVector{Bool})
+    (length(mask) == size(mc, 1)) ||  warn("Boolean mask length (", length(mask), ") ",
+                                           "does not match indexed array size (", size(mc, 1), ") ",
+                                           "along dimension 1!")
+    return getindex(mc, find(mask))
+end
 
-# provide an iteration interface for `MeshConnectivity` instances.
+#---------------------#
+# Iteration Interface #
+#---------------------#
 Base.start(::MeshConnectivity) = 1
 
 function Base.next(mc::MeshConnectivity, state::Integer)
@@ -115,8 +162,5 @@ end
 Base.done(mc::MeshConnectivity, state::Integer) = state > length(mc)
 Base.eltype(::Type{MeshConnectivity}) = Array{Int,1}
 Base.length(mc::MeshConnectivity) = size(mc, 1)
-
-#Base.getindex(mc::MeshConnectivity, i::Integer) = mc.indices[mc.offsets[i]:mc.offsets[i+1]-1]
-Base.getindex(mc::MeshConnectivity, i::Integer) = view(mc.indices, mc.offsets[i]:mc.offsets[i+1]-1)
 Base.endof(mc::MeshConnectivity) = length(mc)
 
