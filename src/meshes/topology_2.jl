@@ -167,7 +167,7 @@ function build!(mt::MeshTopologyGeneric, d::Integer)
     # 'D -> d' and 'd -> 0'
     nentities_D = size(D_D, 1)
     #nentities_d = size(unique(hcat(vcat(V...)...), 2), 2)
-    nentities_d = size(unique(vcat([V[i,:,:] for i = 1:size(V,1)]...), 1), 1)
+    nentities_d = size(unique(sort!.(vcat(V...))), 1)
     ind_D_d = [Array{Int,1}() for i = 1:nentities_D]
     ind_d_0 = [Array{Int,1}() for i = 1:nentities_d]
     
@@ -181,7 +181,8 @@ function build!(mt::MeshTopologyGeneric, d::Integer)
                 k += 1
             end
         else
-            for j in D_D_i
+            # for j in D_D_i
+            for j in D_D[i]
                 if j < i
                     for vi in V[i]
                         if vi in V[j]
@@ -334,7 +335,7 @@ function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::In
     ind_d_dd = [Array{Int,1}() for i = 1:size(d_ddd, 1)]
     
     if d == dd
-        @time fill_intersection!(ind_d_dd, d_ddd, ddd_dd)
+        fill_intersection!(ind_d_dd, d_ddd, ddd_dd)
     elseif d > dd
         d_0  = connectivity!(mt, d,   0)
         dd_0 = connectivity!(mt, dd,  0)
@@ -398,12 +399,14 @@ function vertex_sets(mt::MeshTopologyGeneric, d::Integer, sorted::Bool=true)
     combs = collect(combinations(1:D+1, nverts))
     ncombs = size(combs, 1)
 
-    V = Array{Int}(ncells, ncombs, nverts)
-    for j = 1:ncombs
-        for i = 1:ncells
-            V[i,j,:] = sorted ? sort!(D_0[i,combs[j]]) : D_0[i,combs[j]]
-        end
-    end
+    V = [[D_0[i,comb] for comb in combs] for i = 1:ncells]
+    # V = Array{Int}(ncells, ncombs, nverts)
+    # for j = 1:ncombs
+    #     for i = 1:ncells
+    #         #V[i,j,:] = sorted ? sort!(D_0[i,combs[j]]) : D_0[i,combs[j]]
+    #         V[i][j,:] = sorted ? sort!(D_0[i,combs[j]]) : D_0[i,combs[j]]
+    #     end
+    # end
     return V
 end
 export vertex_sets
