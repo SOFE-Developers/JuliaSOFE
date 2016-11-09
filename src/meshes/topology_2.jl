@@ -28,7 +28,7 @@ end
 function MeshTopology{T<:AbstractMeshTopology,Tn<:Float,Ti<:Integer}(::Type{T},
                                                                      nodes::AbstractArray{Tn,2},
                                                                      cells::AbstractArray{Ti,2})
-    D = dimension(T, cells)
+    D = dimension(T, size(cells, 2))
     connectivities = Dict{Tuple{Int,Int}, MeshConnectivity{Ti}}()
     mt = MeshTopology{T,Tn,Ti}(D, nodes, connectivities)
     init!(mt, cells)
@@ -96,8 +96,7 @@ function init!{T<:Integer}(mt::MeshTopology, cells::AbstractArray{T,2})
 
     # compute 'D -> 0'
     ncells, nverts = size(cells)
-    #@assert nverts == nvertices(mt, D)
-
+    
     ind_D_0 = cells'[:]
     off_D_0 = collect(1:nverts:nverts*(ncells+1))
     
@@ -322,31 +321,7 @@ end
   Return the local vertex combinations that define the
   `d`-dimensional subentities of the mesh cells. 
 """
-function vertex_combs(mt::MeshTopology, d::Integer)
-    D = mt.dimension
-    @assert 0 <= d <= D
-    D_0 = connectivity!(mt, D, 0)
-
-    if length(D_0[1]) == D+1
-        nverts = nvertices(mt, d)
-        return collect(combinations(1:D+1, nverts))
-    elseif length(D_0[1]) == 2^D
-        if D == 2
-            d == 0 && return [[1], [2], [3], [4]]
-            d == 1 && return [[1,2], [1,3], [2,4], [3,4]]
-            d == 2 && return [[1,2,3,4]]
-        elseif D == 3
-            d == 0 && return [[1], [2], [3], [4], [5], [6], [7], [8]]
-            d == 1 && return [[1,2], [1,3], [1,5], [2,4], [2,6], [3,4],
-                              [3,7], [4,8], [5,6], [5,7], [6,8], [7,8]]
-            d == 2 && return [[1,2,3,4], [1,2,5,6], [2,4,6,8],
-                              [3,1,7,5], [4,3,8,7], [5,6,7,8]]
-            d == 3 && return [[1,2,3,4,5,6,7,8]]
-        end
-    else
-        error("... in vertex_combs")
-    end
-end
+function vertex_combs(mt::MeshTopology, d::Integer) end
 
 """
 
@@ -355,29 +330,17 @@ end
   Return the number of vertices that define a `d`-dimensional
   entity of the mesh.
 """
-function nvertices(mt::MeshTopology, d::Integer)
-    D = mt.dimension
-    @assert 0 <= d <= D
-    D_0 = connectivity!(mt, D, 0)
+function nvertices(mt::MeshTopology, d::Integer) end
 
-    if length(D_0[1]) == D+1
-        return d+1
-    elseif length(D_0[1]) == 2^D
-        d == 0 && return 1
-        d == 1 && return 2
-        d == 2 && return 4
-        d == 3 && return 8
-    else
-        error("... in nvertices")
-    end
-end
+"""
 
-function nvertices(s::Symbol)
-    is(s, :int)  && return 2
-    is(s, :tri)  && return 3
-    is(s, :tet)  && return 4
-    is(s, :quad) && return 4
-    is(s, :hex)  && return 8
+    dimension{T<:AbstractMeshTopology,Ti<:Integer}(::Type{T}, cells::AbstractArray{T,2})
+
+  Determine the topological dimension of the given `cells`
+  according to the given topology type `T`.
+"""
+function dimension{T<:AbstractMeshTopology,Ti<:Integer}(::Type{T}, cells::AbstractArray{Ti,2})
+    return dimension(T, cells)
 end
 
 #---------------#
@@ -386,7 +349,13 @@ end
 type Simp <: AbstractMeshTopology end
 typealias MeshTopologySimp MeshTopology{Simp}
 
-dimension{T<:Integer}(::Type{Simp}, cells::AbstractArray{T,2}) = size(cells, 2) - 1
+nvertices(::MeshTopology{Simp}, d::Integer) = d+1
+
+dimension(::Type{Simp}, nverts::Integer) = nverts - 1
+
+function vertex_combs(mt::MeshTopology{Simp}, d::Integer)
+    return collect(combinations(1:dimension(mt)+1, nvertices(mt, d)))
+end
 
 #-----------------#
 # Orthotope Types #
@@ -394,6 +363,28 @@ dimension{T<:Integer}(::Type{Simp}, cells::AbstractArray{T,2}) = size(cells, 2) 
 type Orth <: AbstractMeshTopology end
 typealias MeshTopologyOrth MeshTopology{Orth}
 
-function dimension{T<:Integer}(::Type{Orth}, cells::AbstractArray{T,2})
-    ispow2(size(cells, 2)) ? Int(log2(size(cells, 2))) : error("Invalid #vertices")
+nvertices(::MeshTopology{Orth}, d::Integer) = 2^d
+
+dimension(::Type{Orth}, nverts::Integer) = ispow2(nverts) ? Int(log2(nverts)) : NaN
+
+function vertex_combs(mt::MeshTopology{Orth}, d::Integer)
+    D = dimension(mt)
+    if D == 1
+        d == 0 && return [[1], [2]]
+        d == 1 && return [[1,2]]
+    elseif D == 2
+        d == 0 && return [[1], [2], [3], [4]]
+        d == 1 && return [[1,2], [1,3], [2,4], [3,4]]
+        d == 2 && return [[1,2,3,4]]
+    elseif D == 3
+        d == 0 && return [[1], [2], [3], [4], [5], [6], [7], [8]]
+        d == 1 && return [[1,2], [1,3], [1,5], [2,4], [2,6], [3,4],
+                          [3,7], [4,8], [5,6], [5,7], [6,8], [7,8]]
+        d == 2 && return [[1,2,3,4], [1,2,5,6], [2,4,6,8],
+                          [3,1,7,5], [4,3,8,7], [5,6,7,8]]
+        d == 3 && return [[1,2,3,4,5,6,7,8]]
+    else
+        return [Int[]]
+    end
 end
+
