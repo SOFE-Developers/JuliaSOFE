@@ -234,7 +234,7 @@ function intersection(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Int
     return d_dd
 end
 
-function nintersection(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
+function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
     @assert d >= dd
     d_ddd  = connectivity!(mt, d,   ddd)
     ddd_dd = connectivity!(mt, ddd, dd)
@@ -246,105 +246,95 @@ function nintersection(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::In
     row = zeros(Int, ndd)
     nz = zeros(Bool, ndd)
 
-    ind_d_dd = Array{Int,1}()
-    off_d_dd = ones(Int, nd+1)
+    ind_d_dd = [Array{Int,1}() for i = 1:nd]
+
+    nverts = (d == dd ? dd : dd+1)
     
     for i = 1:nd
-        # fill row
-        for j in A[i]
-            row[B[j]] += 1
-            nz[B[j]] = true
-        end
-
-        println(row, " ", nz)
-        
-        # check row
-        for k = 1:ndd
-            if nz[k] && row[k] == (d == dd ? dd : dd+1)
-                push!(ind_d_dd, k)
-                off_d_dd[k+1:end] += 1
-            end
-        end
-        row[:] = Int(0)
-        nz[:] = false
+        fill_row!(row, nz, d_ddd[i], ddd_dd)
+        fill_ind!(ind_d_dd[i], row, nz, nverts)
     end
-end
 
-function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
-    @assert d >= dd
-    d_ddd  = connectivity!(mt, d,   ddd)
-    ddd_dd = connectivity!(mt, ddd, dd)
+    nind = [length(i) for i in ind_d_dd]
 
-    # initialize indices vector for new connectivity 'd -> dd'
-    ind_d_dd = [Array{Int,1}() for i = 1:size(d_ddd, 1)]
+    ind_d_dd = vcat(ind_d_dd...)
+    off_d_dd = vcat(1, 1 + cumsum!(nind, nind))
     
-    if d == dd
-        fill_intersection!(ind_d_dd, d_ddd, ddd_dd)
-    elseif d > dd
-        d_0  = connectivity!(mt, d,   0)
-        dd_0 = connectivity!(mt, dd,  0)
-
-        fill_intersection!(ind_d_dd, d_ddd, ddd_dd, d_0, dd_0)
-    end
-
-    # compute offsets
-    off = vcat(1, 1 + cumsum([length(i) for i in ind_d_dd]))
-
-    mt.connectivities[(d,dd)] = MeshConnectivity(d, dd, vcat(ind_d_dd...), off)
+    mt.connectivities[(d,dd)] = MeshConnectivity(d, dd, ind_d_dd, off_d_dd)
 end
 
-@noinline function fill_intersection!(d_dd::Array{Array{Int,1},1},
-                                      d_ddd::MeshConnectivity, ddd_dd::MeshConnectivity)
-    for (i, d_ddd_i) in enumerate(d_ddd)
-        for k in d_ddd_i
-            for j in ddd_dd[k]
-                if (i != j) && !(j in d_dd[i])
-                    #push!(d_dd[i], j)
-                    resize!(d_dd[i], length(d_dd[i])+1)
-                    d_dd[i][end] = j
-                end
-            end
+@noinline function fill_row!(row::Array{Int,1}, nz::Array{Bool,1}, d_ddd_i::Array{Int,1}, ddd_dd::MeshConnectivity)
+    for j in d_ddd_i
+        for k in ddd_dd[j]
+            row[k] += 1
+            nz[k] || (nz[k] = true)
         end
     end
-    return nothing
 end
 
-@noinline function fill_intersection!(d_dd::Array{Array{Int,1},1},
-                            d_ddd::MeshConnectivity, ddd_dd::MeshConnectivity,
-                            d_0::MeshConnectivity, dd_0::MeshConnectivity)
-    for (i, d_ddd_i) in enumerate(d_ddd)
-        for k in d_ddd_i
-            for j in ddd_dd[k]
-                if !(j in d_dd[i]) && issubset(dd_0[j], d_0[i])
-                    push!(d_dd[i], j)
-                end
-            end
+@noinline function fill_ind!(ind::Array{Int,1}, row::Array{Int,1}, nz::Array{Bool,1}, nverts::Int)
+    for k = 1:length(row)
+        if nz[k] && row[k] == nverts # (d == dd ? dd : dd+1)
+            resize!(ind, length(ind)+1)
+            ind[end] = k
         end
+        row[k] = 0
+        nz[k] = false
     end
-    return nothing
 end
 
 """
 
-    vertex_sets(mt::MeshTopologyGeneric, d::Integer, sorted::Bool=true)
+    vertex_sets(mt::MeshTopologyGeneric, d::Integer)
 
   Compute for each cell the set of vertex sets 
   incident to the entities of topological dimension `d`.
-  If `sorted` is `true` (default) the indices will be sorted 
-  in increasing order.
 """
-function vertex_sets(mt::MeshTopologyGeneric, d::Integer, sorted::Bool=true)
+function vertex_sets(mt::MeshTopologyGeneric, d::Integer)
     D = mt.dimension
     D_0 = getConnectivity(mt, D, 0)
 
     ncells = size(D_0, 1)
     nverts = d+1
-    #combs = hcat(combinations(1:D+1, nverts)...)'
     combs = collect(combinations(1:D+1, nverts))
     ncombs = size(combs, 1)
 
     V = [[D_0[i,comb] for comb in combs] for i = 1:ncells]
     return V
 end
-export vertex_sets
 
+function vertex_combs(mt::MeshTopologyGeneric, d::Integer)
+
+end
+
+"""
+
+    nvertices(mt::MeshTopologyGeneric, d::Integer)
+
+  Return the number of vertices that define a `d`-dimensional
+  entity of the mesh.
+"""
+function nvertices(mt::MeshTopologyGeneric, d::Integer)
+    D = mt.dimension
+    @assert 0 <= d <= D
+    D_0 = connectivity!(mt, D, 0)
+
+    if size(D_0, 2) == D+1
+        return d+1
+    elseif size(D_0, 2) == 2^D
+        d == 0 && return 1
+        d == 1 && return 2
+        d == 2 && return 4
+        d == 3 && return 8
+    else
+        error()
+    end
+end
+
+function nvertices(s::Symbol)
+    is(s, :int) && return 2
+    is(s, :tri) && return 3
+    is(s, :tet) && return 4
+    is(s, :quad) && return 4
+    is(s, :hex) && return 8
+end
