@@ -248,7 +248,7 @@ function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::In
 
     ind_d_dd = [Array{Int,1}() for i = 1:nd]
 
-    nverts = (d == dd ? dd : dd+1)
+    nverts = (d == dd ? nvertices(mt, dd-1) : nvertices(mt, dd))
     
     for i = 1:nd
         fill_row!(row, nz, d_ddd[i], ddd_dd)
@@ -295,16 +295,44 @@ function vertex_sets(mt::MeshTopologyGeneric, d::Integer)
     D_0 = getConnectivity(mt, D, 0)
 
     ncells = size(D_0, 1)
-    nverts = d+1
-    combs = collect(combinations(1:D+1, nverts))
+    combs = vertex_combs(mt, d)
     ncombs = size(combs, 1)
 
     V = [[D_0[i,comb] for comb in combs] for i = 1:ncells]
     return V
 end
 
-function vertex_combs(mt::MeshTopologyGeneric, d::Integer)
+"""
 
+    vertex_combs(mt::MeshTopologyGeneric, d::Integer)
+
+  Return the local vertex combinations that define the
+  `d`-dimensional subentities of the mesh cells. 
+"""
+function vertex_combs(mt::MeshTopologyGeneric, d::Integer)
+    D = mt.dimension
+    @assert 0 <= d <= D
+    D_0 = connectivity!(mt, D, 0)
+
+    if length(D_0[1]) == D+1
+        nverts = nvertices(mt, d)
+        return collect(combinations(1:D+1, nverts))
+    elseif length(D_0[1]) == 2^D
+        if D == 2
+            d == 0 && return [[1], [2], [3], [4]]
+            d == 1 && return [[1,2], [1,3], [2,4], [3,4]]
+            d == 2 && return [[1,2,3,4]]
+        elseif D == 3
+            d == 0 && return [[1], [2], [3], [4], [5], [6], [7], [8]]
+            d == 1 && return [[1,2], [1,3], [1,5], [2,4], [2,6], [3,4],
+                              [3,7], [4,8], [5,6], [5,7], [6,8], [7,8]]
+            d == 2 && return [[1,2,3,4], [1,2,5,6], [2,4,6,8],
+                              [3,1,7,5], [4,3,8,7], [5,6,7,8]]
+            d == 3 && return [[1,2,3,4,5,6,7,8]]
+        end
+    else
+        error("... in vertex_combs")
+    end
 end
 
 """
@@ -319,22 +347,22 @@ function nvertices(mt::MeshTopologyGeneric, d::Integer)
     @assert 0 <= d <= D
     D_0 = connectivity!(mt, D, 0)
 
-    if size(D_0, 2) == D+1
+    if length(D_0[1]) == D+1
         return d+1
-    elseif size(D_0, 2) == 2^D
+    elseif length(D_0[1]) == 2^D
         d == 0 && return 1
         d == 1 && return 2
         d == 2 && return 4
         d == 3 && return 8
     else
-        error()
+        error("... in nvertices")
     end
 end
 
 function nvertices(s::Symbol)
-    is(s, :int) && return 2
-    is(s, :tri) && return 3
-    is(s, :tet) && return 4
+    is(s, :int)  && return 2
+    is(s, :tri)  && return 3
+    is(s, :tet)  && return 4
     is(s, :quad) && return 4
-    is(s, :hex) && return 8
+    is(s, :hex)  && return 8
 end
