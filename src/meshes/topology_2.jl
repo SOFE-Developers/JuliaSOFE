@@ -234,8 +234,44 @@ function intersection(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Int
     return d_dd
 end
 
+function nintersection(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
+    @assert d >= dd
+    d_ddd  = connectivity!(mt, d,   ddd)
+    ddd_dd = connectivity!(mt, ddd, dd)
+
+    nd = size(d_ddd, 1)
+    ndd = size(ddd_dd, 2)
+    size(d_ddd, 2) == size(ddd_dd, 1) || throw(DimensionMismatch())
+
+    row = zeros(Int, ndd)
+    nz = zeros(Bool, ndd)
+
+    ind_d_dd = Array{Int,1}()
+    off_d_dd = ones(Int, nd+1)
+    
+    for i = 1:nd
+        # fill row
+        for j in A[i]
+            row[B[j]] += 1
+            nz[B[j]] = true
+        end
+
+        println(row, " ", nz)
+        
+        # check row
+        for k = 1:ndd
+            if nz[k] && row[k] == (d == dd ? dd : dd+1)
+                push!(ind_d_dd, k)
+                off_d_dd[k+1:end] += 1
+            end
+        end
+        row[:] = Int(0)
+        nz[:] = false
+    end
+end
+
 function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
-    @assert d >= d
+    @assert d >= dd
     d_ddd  = connectivity!(mt, d,   ddd)
     ddd_dd = connectivity!(mt, ddd, dd)
 
