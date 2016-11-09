@@ -9,9 +9,12 @@ include("connectivity.jl")
 #--------------------------#
 # Type MeshTopologyGeneric #
 #--------------------------#
-# """
-#   Stores the topology of a mesh as a set of incidence relations.
-# """
+"""
+  Stores the topology of a mesh as a set of incidence relations.
+
+  MeshTopologyGeneric{T<:AbstractFloat, S<:Integer}(dim::Integer, nodes::AbstractArray{T,2}, cells::AbstractArray{S,2})
+  constructs and initializes a mesh topology instance.
+"""
 type MeshTopologyGeneric{T<:AbstractFloat} <: AbstractMeshTopology
     dimension :: Int
     nodes :: Array{T, 2}
@@ -110,8 +113,10 @@ end
   of `build`, `transpose` and `intersection`.
 """
 function connectivity!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
-    d  != 0 && (haskey(mt.connectivities, (d, 0)) || build!(mt, d))
-    dd != 0 && (haskey(mt.connectivities, (dd,0)) || build!(mt, dd))
+    # d  != 0 && (haskey(mt.connectivities, (d, 0)) || build!(mt, d))
+    # dd != 0 && (haskey(mt.connectivities, (dd,0)) || build!(mt, dd))
+    haskey(mt.connectivities, (d, 0)) || build!(mt, d)
+    haskey(mt.connectivities, (dd,0)) || build!(mt, dd)
     
     if !haskey(mt.connectivities, (d,dd))
         if d < dd
@@ -148,21 +153,30 @@ end
 """
 function build!(mt::MeshTopologyGeneric, d::Integer)
     D = mt.dimension
-    @assert 0 < d < D "0 < (d = $d) < D = $D"
-    
-    # compute the set of vertex sets for each cell
-    print("vertex_sets: ")
-    @time V = vertex_sets(mt, d)
 
-    # take unique sorted index sets
-    entities_d = unique(sort!.(vcat(V...)))
-    nentities_d = length(entities_d)
-    nverts_d = length(entities_d[1])
+    if d == 0
+        nnodes = size(mt.nodes, 1)
+        ind_d_0 = collect(1:nnodes)
+        off_d_0 = collect(1:nnodes+1)
+    elseif 0 < d < D
+        # compute the set of vertex sets for each cell
+        print("vertex_sets: ")
+        @time V = vertex_sets(mt, d)
+        
+        # take unique sorted index sets
+        entities_d = unique(sort!.(vcat(V...)))
+        sort!(entities_d, lt=lexless)
+        nentities_d = length(entities_d)
+        nverts_d = length(entities_d[1])
+        
+        # compute indices and offsets vectors
+        ind_d_0 = vcat(entities_d...)
+        off_d_0 = collect(1:nverts_d:nverts_d*(nentities_d+1))
+    elseif d == D
+        warn("Cannot build cell dimension, use init! method!")
+        return nothing
+    end
     
-    # compute indices and offsets vectors
-    ind_d_0 = vcat(entities_d...)
-    off_d_0 = collect(1:nverts_d:nverts_d*(nentities_d+1))
-
     mt.connectivities[(d,0)] = MeshConnectivity(d, 0, ind_d_0, off_d_0)
 end
 function build(mt::MeshTopologyGeneric, d::Integer)
