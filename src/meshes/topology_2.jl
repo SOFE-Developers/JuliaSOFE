@@ -1,55 +1,55 @@
 import Combinatorics: combinations
 
-export MeshTopologyGeneric
+export MeshTopology
 export init!, connectivity!, connectivity
-export build!, build, transpose!, transpose, intersection!, intersection
+#export build!, build, transpose!, transpose, intersection!, intersection
 
 include("connectivity.jl")
 
-#--------------------------#
-# Type MeshTopologyGeneric #
-#--------------------------#
+typealias Float AbstractFloat
+
+#-------------------#
+# Type MeshTopology #
+#-------------------#
 """
   Stores the topology of a mesh as a set of incidence relations.
 
-  MeshTopologyGeneric{T<:AbstractFloat, S<:Integer}(dim::Integer, nodes::AbstractArray{T,2}, cells::AbstractArray{S,2})
-  constructs and initializes a mesh topology instance.
+  `MeshTopology(dim, nodes, cells)` constructs and initializes 
+  a mesh topology instance.
 """
-type MeshTopologyGeneric{T<:AbstractFloat} <: AbstractMeshTopology
+type MeshTopology{T<:AbstractMeshTopology,Tn<:Float,Ti<:Integer} <: AbstractMeshTopology
     dimension :: Int
-    nodes :: Array{T, 2}
-    connectivities :: Dict{Tuple{Int, Int}, MeshConnectivity}
+    nodes :: Array{Tn, 2}
+    connectivities :: Dict{Tuple{Int, Int}, MeshConnectivity{Ti}}
 end
 
 # Outer Constructors
 # -------------------
-function MeshTopologyGeneric{T<:AbstractFloat}(dim::Integer, nodes::AbstractArray{T,2})
-    connect = Dict{Tuple{Int,Int}, MeshConnectivity}()
-    return MeshTopologyGeneric(dim, nodes, connect)
-end
-
-function MeshTopologyGeneric{T<:AbstractFloat,S<:Integer}(dim::Integer, nodes::AbstractArray{T,2},
-                                                          cells::AbstractArray{S,2})
-    mt = MeshTopologyGeneric(dim, nodes)
+function MeshTopology{T<:AbstractMeshTopology,Tn<:Float,Ti<:Integer}(::Type{T},
+                                                                     nodes::AbstractArray{Tn,2},
+                                                                     cells::AbstractArray{Ti,2})
+    D = dimension(T, cells)
+    connectivities = Dict{Tuple{Int,Int}, MeshConnectivity{Ti}}()
+    mt = MeshTopology{T,Tn,Ti}(D, nodes, connectivities)
     init!(mt, cells)
     return mt
 end
 
 # Associated Methods
 # -------------------
-function Base.show(io::IO, mt::MeshTopologyGeneric)
-    println(io, "MeshTopologyGeneric")
+function Base.show(io::IO, mt::MeshTopology)
+    println(io, "MeshTopology")
     println(io, "\tdimension : ", mt.dimension)
     println(io, "\tconnectivities : ",
             ["\n\t\t$connect" for connect in mt.connectivities]...)
 end
 
-function getConnectivity(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
-    haskey(mt.connectivities, (d,dd)) || @time connectivity!(mt, d, dd)
+function getConnectivity(mt::MeshTopology, d::Integer, dd::Integer)
+    haskey(mt.connectivities, (d,dd)) || connectivity!(mt, d, dd)
     return mt.connectivities[(d,dd)]
 end
 
-function getEntities(mt::MeshTopologyGeneric, d::Integer)
+function getEntities(mt::MeshTopology, d::Integer)
     if d == 0
         return collect(getConnectivity(mt, d, 0))
     else
@@ -59,11 +59,11 @@ end
 
 """
 
-    getBoundary(mt::MeshTopologyGeneric, d::Integer)
+    getBoundary(mt::MeshTopology, d::Integer)
 
   Determine the boundary entities of topological dimension `d`.
 """
-function getBoundary(mt::MeshTopologyGeneric, d::Integer)
+function getBoundary(mt::MeshTopology, d::Integer)
     D = getDim(mt) # mt.dimension
     D_Dm1 = getConnectivity(mt, D-1, D)
     bmask = [length(r) == 1 for r in D_Dm1]
@@ -77,42 +77,41 @@ function getBoundary(mt::MeshTopologyGeneric, d::Integer)
     end
 end
 
-getBoundary(mt::MeshTopologyGeneric) = getBoundary(mt, getDim(mt)-1)
+getBoundary(mt::MeshTopology) = getBoundary(mt, getDim(mt)-1)
 
-function getBoundary(mt::MeshTopologyGeneric, f::Function)
+function getBoundary(mt::MeshTopology, f::Function)
     bmask = getBoundary(mt)
     error("Not implemented yet...!")
 end
 
 """
 
-    init!{T<:Integer}(mt::MeshTopologyGeneric, cells::AbstractArray{T,2})
+    init!{T<:Integer}(mt::MeshTopology, cells::AbstractArray{T,2})
 
-  Compute the incidence relations `D -> 0`, `0 -> D` and `D -> D` 
-  from the given cell connectivity array where `D` is the dimension
-  of the topology.
+  Compute the incidence relations `D -> 0` from the given cell 
+  connectivity array where `D` is the dimension of the topology.
 """
-function init!{T<:Integer}(mt::MeshTopologyGeneric, cells::AbstractArray{T,2})
-    D = mt.dimension
+function init!{T<:Integer}(mt::MeshTopology, cells::AbstractArray{T,2})
+    D = dimension(mt)
 
     # compute 'D -> 0'
     ncells, nverts = size(cells)
+    #@assert nverts == nvertices(mt, D)
+
     ind_D_0 = cells'[:]
     off_D_0 = collect(1:nverts:nverts*(ncells+1))
     
     mt.connectivities[(D,0)] = MeshConnectivity(D, 0, ind_D_0, off_D_0)
-
-    return nothing
 end
 
 """
 
-    connectivity(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+    connectivity(mt::MeshTopology, d::Integer, dd::Integer)
 
   Compute the incidence relation `d -> dd` by successive application
   of `build`, `transpose` and `intersection`.
 """
-function connectivity!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+function connectivity!(mt::MeshTopology, d::Integer, dd::Integer)
     # d  != 0 && (haskey(mt.connectivities, (d, 0)) || build!(mt, d))
     # dd != 0 && (haskey(mt.connectivities, (dd,0)) || build!(mt, dd))
     haskey(mt.connectivities, (d, 0)) || build!(mt, d)
@@ -134,7 +133,7 @@ function connectivity!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
 
     return mt.connectivities[(d,dd)]
 end
-function connectivity(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+function connectivity(mt::MeshTopology, d::Integer, dd::Integer)
     prekeys = collect(keys(mt.connectivities))
     d_dd = connectivity!(mt, d, dd)
     postkeys = keys(mt.connectivities)
@@ -146,12 +145,12 @@ end
 
 """
 
-    build!(mt::MeshTopologyGeneric, d::Integer)
+    build!(mt::MeshTopology, d::Integer)
 
   Compute the incidence relation `d -> 0` from `D -> 0`
   for `0 < d < D` where `D` is the dimension of the topology.
 """
-function build!(mt::MeshTopologyGeneric, d::Integer)
+function build!(mt::MeshTopology, d::Integer)
     D = mt.dimension
 
     if d == 0
@@ -179,7 +178,7 @@ function build!(mt::MeshTopologyGeneric, d::Integer)
     
     mt.connectivities[(d,0)] = MeshConnectivity(d, 0, ind_d_0, off_d_0)
 end
-function build(mt::MeshTopologyGeneric, d::Integer)
+function build(mt::MeshTopology, d::Integer)
     prekeys = collect(keys(mt.connectivities))
     d_0 = build!(mt, d)
     postkeys = keys(mt.connectivities)
@@ -191,12 +190,12 @@ end
 
 """
 
-    transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+    transpose!(mt::MeshTopology, d::Integer, dd::Integer)
 
   Compute the incidence relation `dd -> d` from `d -> dd`
   for `d > dd`.
 """
-function transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+function transpose!(mt::MeshTopology, d::Integer, dd::Integer)
     @assert d > dd
     # get connectivity d -> dd
     connect_d_dd = connectivity!(mt, d, dd)
@@ -221,7 +220,7 @@ function transpose!(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
     mt.connectivities[(dd, d)] = MeshConnectivity(dd, d, ind_dd_d, off_dd_d)
 end
 
-function transpose(mt::MeshTopologyGeneric, d::Integer, dd::Integer)
+function transpose(mt::MeshTopology, d::Integer, dd::Integer)
     prekeys = collect(keys(mt.connectivities))
     dd_d = transpose!(mt, d, dd)
     postkeys = keys(mt.connectivities)
@@ -233,12 +232,12 @@ end
 
 """
 
-    intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
+    intersection!(mt::MeshTopology, d::Integer, dd::Integer, ddd::Integer)
 
   Compute the incidence relation `d -> dd` from
   `d -> ddd` and `ddd -> dd` for `d >= dd`.
 """
-function intersection(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
+function intersection(mt::MeshTopology, d::Integer, dd::Integer, ddd::Integer)
     prekeys = collect(keys(mt.connectivities))
     d_dd = intersection!(mt, d, dd, ddd)
     postkeys = keys(mt.connectivities)
@@ -248,7 +247,7 @@ function intersection(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Int
     return d_dd
 end
 
-function intersection!(mt::MeshTopologyGeneric, d::Integer, dd::Integer, ddd::Integer)
+function intersection!(mt::MeshTopology, d::Integer, dd::Integer, ddd::Integer)
     @assert d >= dd
     d_ddd  = connectivity!(mt, d,   ddd)
     ddd_dd = connectivity!(mt, ddd, dd)
@@ -299,12 +298,12 @@ end
 
 """
 
-    vertex_sets(mt::MeshTopologyGeneric, d::Integer)
+    vertex_sets(mt::MeshTopology, d::Integer)
 
   Compute for each cell the set of vertex sets 
   incident to the entities of topological dimension `d`.
 """
-function vertex_sets(mt::MeshTopologyGeneric, d::Integer)
+function vertex_sets(mt::MeshTopology, d::Integer)
     D = mt.dimension
     D_0 = getConnectivity(mt, D, 0)
 
@@ -318,12 +317,12 @@ end
 
 """
 
-    vertex_combs(mt::MeshTopologyGeneric, d::Integer)
+    vertex_combs(mt::MeshTopology, d::Integer)
 
   Return the local vertex combinations that define the
   `d`-dimensional subentities of the mesh cells. 
 """
-function vertex_combs(mt::MeshTopologyGeneric, d::Integer)
+function vertex_combs(mt::MeshTopology, d::Integer)
     D = mt.dimension
     @assert 0 <= d <= D
     D_0 = connectivity!(mt, D, 0)
@@ -351,12 +350,12 @@ end
 
 """
 
-    nvertices(mt::MeshTopologyGeneric, d::Integer)
+    nvertices(mt::MeshTopology, d::Integer)
 
   Return the number of vertices that define a `d`-dimensional
   entity of the mesh.
 """
-function nvertices(mt::MeshTopologyGeneric, d::Integer)
+function nvertices(mt::MeshTopology, d::Integer)
     D = mt.dimension
     @assert 0 <= d <= D
     D_0 = connectivity!(mt, D, 0)
@@ -379,4 +378,22 @@ function nvertices(s::Symbol)
     is(s, :tet)  && return 4
     is(s, :quad) && return 4
     is(s, :hex)  && return 8
+end
+
+#---------------#
+# Simplex Types #
+#---------------#
+type Simp <: AbstractMeshTopology end
+typealias MeshTopologySimp MeshTopology{Simp}
+
+dimension{T<:Integer}(::Type{Simp}, cells::AbstractArray{T,2}) = size(cells, 2) - 1
+
+#-----------------#
+# Orthotope Types #
+#-----------------#
+type Orth <: AbstractMeshTopology end
+typealias MeshTopologyOrth MeshTopology{Orth}
+
+function dimension{T<:Integer}(::Type{Orth}, cells::AbstractArray{T,2})
+    ispow2(size(cells, 2)) ? Int(log2(size(cells, 2))) : error("Invalid #vertices")
 end

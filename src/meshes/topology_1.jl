@@ -1,5 +1,5 @@
 # Helper Function
-function myUnique(a) # TODO
+function myUnique(a)
   ua = unique(a,1)
   N = size(a,1)
   M = size(ua,1)
