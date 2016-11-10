@@ -25,5 +25,8 @@ export FESpace, dofMap
 include(joinpath(dirname(@__FILE__), "operators", "Operators.jl"))
 using .Operators
 
+include(joinpath(dirname(@__FILE__), "postprocessing", "Visualization.jl"))
+using .Visualization
+
 end # of module JuliaSOFE
 

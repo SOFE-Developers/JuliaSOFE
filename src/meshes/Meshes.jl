@@ -3,6 +3,7 @@ __precompile__()
 module Meshes
 
 export AbstractMesh, Mesh, TensorProductMesh, UnitSquare, UnitCube
+export dimension, topology, nodes, entities
 export evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
 
 using ..Elements
@@ -59,6 +60,23 @@ end
   Return the topology of the mesh.
 """
 @inline topology(m::Mesh) = getfield(m, :topology)
+
+"""
+
+    nodes(m::Mesh)
+
+  Return the node coordinates of the mesh.
+"""
+Topology.nodes(m::Mesh) = nodes(topology(m))
+
+"""
+
+    entities(m::Mesh, d::Integer)
+
+  Return the connectivity array for the mesh entities
+  of topological dimension `d`.
+"""
+Topology.entities(m::Mesh, d::Integer) = entities(topology(m), d)
 
 # Reference Maps
 include("refmaps.jl")
