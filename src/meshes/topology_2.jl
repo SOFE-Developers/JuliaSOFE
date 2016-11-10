@@ -1,12 +1,17 @@
 import Combinatorics: combinations
 
 export MeshTopology
-export init!, connectivity!, connectivity
-#export build!, build, transpose!, transpose, intersection!, intersection
+export incidence!, incidence, connectivity!, connectivity
+#export init!,  build!, build, transpose!, transpose, intersection!, intersection
 
 include("connectivity.jl")
 
 typealias Float AbstractFloat
+
+type Simp <: AbstractMeshTopology end
+type Orth <: AbstractMeshTopology end
+
+typealias TopologyTypes Union{Simp, Orth}
 
 #-------------------#
 # Type MeshTopology #
@@ -17,7 +22,7 @@ typealias Float AbstractFloat
   `MeshTopology(dim, nodes, cells)` constructs and initializes 
   a mesh topology instance.
 """
-type MeshTopology{T<:AbstractMeshTopology,Tn<:Float,Ti<:Integer} <: AbstractMeshTopology
+type MeshTopology{T<:TopologyTypes,Tn<:Float,Ti<:Integer} <: AbstractMeshTopology
     dimension :: Int
     nodes :: Array{Tn, 2}
     connectivities :: Dict{Tuple{Int, Int}, MeshConnectivity{Ti}}
@@ -25,9 +30,9 @@ end
 
 # Outer Constructors
 # -------------------
-function MeshTopology{T<:AbstractMeshTopology,Tn<:Float,Ti<:Integer}(::Type{T},
-                                                                     nodes::AbstractArray{Tn,2},
-                                                                     cells::AbstractArray{Ti,2})
+function MeshTopology{T<:TopologyTypes,Tn<:Float,Ti<:Integer}(::Type{T},
+                                                              nodes::AbstractArray{Tn,2},
+                                                              cells::AbstractArray{Ti,2})
     D = dimension(T, size(cells, 2))
     connectivities = Dict{Tuple{Int,Int}, MeshConnectivity{Ti}}()
     mt = MeshTopology{T,Tn,Ti}(D, nodes, connectivities)
@@ -45,44 +50,80 @@ function Base.show(io::IO, mt::MeshTopology)
 end
 
 function getConnectivity(mt::MeshTopology, d::Integer, dd::Integer)
-    haskey(mt.connectivities, (d,dd)) || connectivity!(mt, d, dd)
-    return mt.connectivities[(d,dd)]
+    haskey(mt.connectivities, (d,dd)) || incidence!(mt, d, dd)
+    return mt.connectivities[(d,dd)][:]
 end
 
 function getEntities(mt::MeshTopology, d::Integer)
     if d == 0
-        return collect(getConnectivity(mt, d, 0))
-    else
         return hcat(getConnectivity(mt, d, 0)...)'
-    end
-end
-
-"""
-
-    getBoundary(mt::MeshTopology, d::Integer)
-
-  Determine the boundary entities of topological dimension `d`.
-"""
-function getBoundary(mt::MeshTopology, d::Integer)
-    D = getDim(mt) # mt.dimension
-    D_Dm1 = getConnectivity(mt, D-1, D)
-    bmask = [length(r) == 1 for r in D_Dm1]
-
-    if d == D-1
-        return bmask
     else
-        d_Dm1 = getConnectivity(mt, d, D-1)
-        bind = find(bmask)
-        bmask = [any(i in bind for i in r) for r in d_Dm1]
+        return getConnectivity(mt, d, 0)
     end
 end
 
-getBoundary(mt::MeshTopology) = getBoundary(mt, getDim(mt)-1)
+connectivity!(mt::MeshTopology, d::Integer, dd::Integer) = incidence!(mt, d, dd)[:]
+connectivity(mt::MeshTopology, d::Integer, dd::Integer) = incidence(mt, d, dd)[:]
 
-function getBoundary(mt::MeshTopology, f::Function)
-    bmask = getBoundary(mt)
-    error("Not implemented yet...!")
+entities!(mt::MeshTopology, d::Integer) = connectivity!(mt, d, 0)
+entities(mt::MeshTopology, d::Integer) = connectivity(mt, d, 0)
+
+"""
+
+    boundary(mt::MeshTopology)
+
+  Return a boolean mask marking the boundary facets of the mesh.
+"""
+boundary(mt::MeshTopology) = boundary(mt::MeshTopology, dimension(mt)-1)
+getBoundary(mt::MeshTopology) = boundary(mt)
+
+"""
+
+    boundary(mt::MeshTopology, d::Integer)
+
+  Return a boolean mask marking the boundary entities of
+  topological dimension `d`.
+"""
+function boundary(mt::MeshTopology, d::Integer)
+    D = dimension(mt)
+    facets_D = incidence(mt, D-1, D)
+
+    mask = zeros(Bool, size(facets_D, 1))
+    for i = 1:size(facets_D, 1)
+        mask[i] = length(facets_D[i]) == 1
+    end
+
+    if d != D-1
+        d_facets = incidence(mt, d, D-1)
+        ind_facets = find(mask)
+
+        mask = zeros(Bool, size(d_facets, 1))
+        for j in eachindex(mask)
+            mask[j] = any(i in ind_facets for i in d_facets[j])
+        end
+    end
+
+    return mask
 end
+
+"""
+
+    boundary(mt::MeshTopology, f::Function)
+
+  Return a boolean mask marking the boundary facets whos
+  midpoints belong to the boundary part specified by `f`.
+"""
+function boundary(mt::MeshTopology, f::Function)
+    mask = boundary(mt)
+    facets = entities(mt, dimension(mt)-1)
+    centroids = mean(nodes(mt)[facets,:], 2)[:,1,:]
+    mask &= f(centroids)
+    return mask
+end
+getBoundary(mt::MeshTopology, f::Function) = boundary(mt, f)
+
+# Initialization and incidence computation
+# -----------------------------------------
 
 """
 
@@ -94,7 +135,6 @@ end
 function init!{T<:Integer}(mt::MeshTopology, cells::AbstractArray{T,2})
     D = dimension(mt)
 
-    # compute 'D -> 0'
     ncells, nverts = size(cells)
     
     ind_D_0 = cells'[:]
@@ -105,12 +145,12 @@ end
 
 """
 
-    connectivity(mt::MeshTopology, d::Integer, dd::Integer)
+    incidence(mt::MeshTopology, d::Integer, dd::Integer)
 
   Compute the incidence relation `d -> dd` by successive application
   of `build`, `transpose` and `intersection`.
 """
-function connectivity!(mt::MeshTopology, d::Integer, dd::Integer)
+function incidence!(mt::MeshTopology, d::Integer, dd::Integer)
     # d  != 0 && (haskey(mt.connectivities, (d, 0)) || build!(mt, d))
     # dd != 0 && (haskey(mt.connectivities, (dd,0)) || build!(mt, dd))
     haskey(mt.connectivities, (d, 0)) || build!(mt, d)
@@ -118,23 +158,23 @@ function connectivity!(mt::MeshTopology, d::Integer, dd::Integer)
     
     if !haskey(mt.connectivities, (d,dd))
         if d < dd
-            connectivity!(mt, dd, d)
+            incidence!(mt, dd, d)
             transpose!(mt, dd, d)
         else
             D = mt.dimension
             ddd = (d == 0 && dd == 0) ? D : 0
             
-            connectivity!(mt, d, ddd)
-            connectivity!(mt, ddd, dd)
+            incidence!(mt, d, ddd)
+            incidence!(mt, ddd, dd)
             intersection!(mt, d, dd, ddd)
         end
     end
 
     return mt.connectivities[(d,dd)]
 end
-function connectivity(mt::MeshTopology, d::Integer, dd::Integer)
+function incidence(mt::MeshTopology, d::Integer, dd::Integer)
     prekeys = collect(keys(mt.connectivities))
-    d_dd = connectivity!(mt, d, dd)
+    d_dd = incidence!(mt, d, dd)
     postkeys = keys(mt.connectivities)
     for key in setdiff(postkeys, prekeys)
         delete!(mt.connectivities, key)
@@ -158,14 +198,14 @@ function build!(mt::MeshTopology, d::Integer)
         off_d_0 = collect(1:nnodes+1)
     elseif 0 < d < D
         # compute the set of vertex sets for each cell
-        print("vertex_sets: ")
-        @time V = vertex_sets(mt, d)
+        V = vertex_sets(mt, d)
         
         # take unique sorted index sets
         entities_d = unique(sort!.(vcat(V...)))
         sort!(entities_d, lt=lexless)
+
         nentities_d = length(entities_d)
-        nverts_d = length(entities_d[1])
+        nverts_d = nvertices(mt, d)
         
         # compute indices and offsets vectors
         ind_d_0 = vcat(entities_d...)
@@ -197,9 +237,9 @@ end
 function transpose!(mt::MeshTopology, d::Integer, dd::Integer)
     @assert d > dd
     # get connectivity d -> dd
-    connect_d_dd = connectivity!(mt, d, dd)
+    d_dd = incidence!(mt, d, dd)
 
-    I, J = findn(connect_d_dd)
+    I, J = findn(d_dd)
 
     # compute indices vector
     P = sortperm(J)
@@ -236,20 +276,10 @@ end
   Compute the incidence relation `d -> dd` from
   `d -> ddd` and `ddd -> dd` for `d >= dd`.
 """
-function intersection(mt::MeshTopology, d::Integer, dd::Integer, ddd::Integer)
-    prekeys = collect(keys(mt.connectivities))
-    d_dd = intersection!(mt, d, dd, ddd)
-    postkeys = keys(mt.connectivities)
-    for key in setdiff(postkeys, prekeys)
-        delete!(mt.connectivities, key)
-    end
-    return d_dd
-end
-
 function intersection!(mt::MeshTopology, d::Integer, dd::Integer, ddd::Integer)
     @assert d >= dd
-    d_ddd  = connectivity!(mt, d,   ddd)
-    ddd_dd = connectivity!(mt, ddd, dd)
+    d_ddd  = incidence!(mt, d,   ddd)
+    ddd_dd = incidence!(mt, ddd, dd)
 
     nd = size(d_ddd, 1)
     ndd = size(ddd_dd, 2)
@@ -264,7 +294,22 @@ function intersection!(mt::MeshTopology, d::Integer, dd::Integer, ddd::Integer)
     
     for i = 1:nd
         fill_row!(row, nz, d_ddd[i], ddd_dd)
+        # for j in d_ddd[i]
+        #     for k in ddd_dd[j]
+        #         row[k] += 1
+        #         nz[k] || (nz[k] = true)
+        #     end
+        # end
+
         fill_ind!(ind_d_dd[i], row, nz, nverts)
+        # for k = 1:length(row)
+        #     if nz[k] && row[k] == nverts
+        #         resize!(ind_d_dd[i], length(ind_d_dd[i])+1)
+        #         ind_d_dd[i][end] = k
+        #     end
+        #     row[k] = 0
+        #     nz[k] = false
+        # end
     end
 
     nind = [length(i) for i in ind_d_dd]
@@ -273,6 +318,15 @@ function intersection!(mt::MeshTopology, d::Integer, dd::Integer, ddd::Integer)
     off_d_dd = vcat(1, 1 + cumsum!(nind, nind))
     
     mt.connectivities[(d,dd)] = MeshConnectivity(d, dd, ind_d_dd, off_d_dd)
+end
+function intersection(mt::MeshTopology, d::Integer, dd::Integer, ddd::Integer)
+    prekeys = collect(keys(mt.connectivities))
+    d_dd = intersection!(mt, d, dd, ddd)
+    postkeys = keys(mt.connectivities)
+    for key in setdiff(postkeys, prekeys)
+        delete!(mt.connectivities, key)
+    end
+    return d_dd
 end
 
 @noinline function fill_row!(row::Array{Int,1}, nz::Array{Bool,1}, d_ddd_i::Array{Int,1}, ddd_dd::MeshConnectivity)
@@ -339,14 +393,13 @@ function nvertices(mt::MeshTopology, d::Integer) end
   Determine the topological dimension of the given `cells`
   according to the given topology type `T`.
 """
-function dimension{T<:AbstractMeshTopology,Ti<:Integer}(::Type{T}, cells::AbstractArray{Ti,2})
+function dimension{T<:TopologyTypes,Ti<:Integer}(::Type{T}, cells::AbstractArray{Ti,2})
     return dimension(T, cells)
 end
 
-#---------------#
-# Simplex Types #
-#---------------#
-type Simp <: AbstractMeshTopology end
+#-------------------------#
+# Simplex Types Specifics #
+#-------------------------#
 typealias MeshTopologySimp MeshTopology{Simp}
 
 nvertices(::MeshTopology{Simp}, d::Integer) = d+1
@@ -357,10 +410,9 @@ function vertex_combs(mt::MeshTopology{Simp}, d::Integer)
     return collect(combinations(1:dimension(mt)+1, nvertices(mt, d)))
 end
 
-#-----------------#
-# Orthotope Types #
-#-----------------#
-type Orth <: AbstractMeshTopology end
+#---------------------------#
+# Orthotope Types Specifics #
+#---------------------------#
 typealias MeshTopologyOrth MeshTopology{Orth}
 
 nvertices(::MeshTopology{Orth}, d::Integer) = 2^d
