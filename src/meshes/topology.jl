@@ -86,18 +86,30 @@ end
   Return a mesh topology instance of appropriate type. 
 """
 function MeshTopology(nodes, cells)
+    nV = size(cells, 2)
+    
     if USE_X
-        if size(cells, 2) == 3
+        if nV == 3
             # return MeshTopologyX(Tri, nodes, cells)
             return MeshTopologyTri(nodes, cells)
-        elseif size(cells, 2) == 4
+        elseif nV == 4
             # return MeshTopologyX(Quad, nodes, cells)
             return MeshTopologyQuad(nodes, cells)
         else
             error("Invalid cell connectivity!")
         end
     else
-        return MeshTopologyGeneric(size(nodes, 2), nodes, cells)
+        if size(nodes, 2) == 1
+            nV == 2 && return MeshTopology(Simp, nodes, cells)
+        elseif size(nodes, 2) == 2
+            nV == 3 && return MeshTopology(Simp, nodes, cells)
+            nV == 4 && return MeshTopology(Orth, nodes, cells)
+        elseif size(nodes, 2) == 3
+            nV == 4 && return MeshTopology(Simp, nodes, cells)
+            nV == 8 && return MeshTopology(Orth, nodes, cells)
+        end
+
+        error("Invalid case...")
     end
 end
 
