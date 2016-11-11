@@ -2,7 +2,7 @@ __precompile__()
 
 module Meshes
 
-export AbstractMesh, Mesh, TensorProductMesh, UnitSquare, UnitCube
+export AbstractMesh, Mesh
 export dimension, topology, nodes, entities
 export evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
 

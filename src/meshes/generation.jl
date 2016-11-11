@@ -1,5 +1,9 @@
 using ..Helpers
 
+export TensorProductMesh
+export UnitSquare, UnitCube
+export UnitTriangle
+
 """
 
     TensorProductMesh{T<:AbstractFloat}(grids::AbstractArray{T,1}...)
@@ -96,3 +100,23 @@ UnitCube(nx::Integer, ny::Integer, nz::Integer) = TensorProductMesh(linspace(0,1
                                                                     linspace(0,1,ny),
                                                                     linspace(0,1,nz))
 UnitCube(n::Integer) = UnitCube(n,n,n)
+
+function UnitTriangle(n::Integer)
+    m = UnitSquare(n)
+    n = nodes(m)
+    c = entities(m, 2)
+
+    mask = sum(n,2)[:] .< 1+1e-9
+    off = cumsum(!mask)
+
+    c = ndarray([c[i,:] for i = 1:size(c,1) if sum(mean(n[c[i,:],:],1)) < 1.])
+    for j = 1:size(c,2)
+        for i = 1:size(c,1)
+            c[i,j] -= off[c[i,j]]
+        end
+    end
+
+    n = n[mask,:]
+
+    return Mesh(n,c)
+end
