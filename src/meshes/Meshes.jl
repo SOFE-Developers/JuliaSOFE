@@ -30,9 +30,9 @@ type Mesh <: AbstractMesh
     function Mesh{T<:Float, S<:Integer}(nodes::AbstractArray{T,2},
                                         cells::AbstractArray{S,2})
         dim = size(nodes, 2)
-        if size(cells, 2) == 3
+        if size(cells, 2) == dim + 1
             element = LagrangeP1(dim)
-        elseif size(cells, 2) == 4
+        elseif (dim == 2) & (size(cells, 2) == 4)
             element = LagrangeQ1(dim)
         else
             error()
