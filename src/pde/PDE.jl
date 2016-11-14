@@ -25,6 +25,25 @@ end
 
 # Associated Methods
 # -------------------
+function solve(pde::AbstractPDE)
+    assemble!(pde)
+    compute(pde)
+end
 
+function assemble!(pde::AbstractPDE)
+    map(assemble!, pde.lhs)
+    # for operator in pde.lhs
+    #     assemble!(operator)
+    # end
+
+    map(assemble!, pde.rhs)
+    # for functional in pde.rhs
+    #     assemble!(functional)
+    # end
+end
+
+function compute(pde::AbstractPDE)
+    
+end
 
 end # of module PDE
