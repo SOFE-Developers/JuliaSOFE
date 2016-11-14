@@ -1,6 +1,10 @@
 module Helpers
 
+export dimension
 export tensorprod, lagrangeNodesP, ndarray
+
+function dimension
+end
 
 function tensorprod{T}(gridx::AbstractArray{T,1})
     return hcat([i for i in gridx])

@@ -1,3 +1,5 @@
+export MeshConnectivity
+
 #-----------------------#
 # Type MeshConnectivity #
 #-----------------------#

@@ -1,3 +1,5 @@
+export evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
+
 """
 
     evalReferenceMaps{T<:Float}(m::Mesh, points::AbstractArray{T,2}, deriv::Integer=0)

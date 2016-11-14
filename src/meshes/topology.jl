@@ -1,10 +1,11 @@
 module Topology
 
 export AbstractMeshTopology
-export MeshTopology, getDim, getNodes, getConnectivity, getEntities, getNumber
+export MeshTopology
 export dimension, nodes, connectivity, entities
+export getDim, getNodes, getConnectivity, getEntities, getNumber
 
-import ..Meshes: dimension
+import ...Helpers: dimension
 
 #-----------------------------#
 # Abstract Mesh Topology Type #

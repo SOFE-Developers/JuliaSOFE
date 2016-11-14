@@ -1,9 +1,10 @@
 import Combinatorics: combinations
 
-export MeshTopology
-export incidence!, incidence, connectivity!, connectivity
-export entities!, entities, number!, number
-export boundary
+import ...Helpers: dimension
+
+export MeshTopology, MeshTopologySimp, MeshTopologyOrth
+export dimension, nodes, entities, connectivity, incidence, boundary, number
+export entities!, connectivity!, incidence!, number!
 #export init!,  build!, build, transpose!, transpose, intersection!, intersection
 
 include("connectivity.jl")

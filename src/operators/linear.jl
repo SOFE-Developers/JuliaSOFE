@@ -1,7 +1,8 @@
 # EXPORTS
 export LinearOperator, Functional
 export fid
-export vector, vector!, getVector, setVector!, evaluate
+export vector, vector!, evaluate
+export getVector, setVector!
 
 abstract LinearOperator <: AbstractOperator
 

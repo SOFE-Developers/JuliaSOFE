@@ -1,5 +1,8 @@
 # EXPORTS
 export ScalarOperator, VectorOperator, MatrixOperator
+export id, Id, ID
+export grad, Grad, GRAD
+export div, Div, DIV
 
 abstract ScalarOperator <: AbstractOperator
 abstract VectorOperator <: AbstractOperator

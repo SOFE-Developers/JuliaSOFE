@@ -2,7 +2,8 @@
 export BilinearOperator, Operator
 export idid
 export GradGrad
-export matrix, matrix!, getMatrix, setMatrix!, evaluate
+export matrix, matrix!, evaluate
+export getMatrix, setMatrix!
 
 #-------------------------#
 # Bilinear Operator Types #

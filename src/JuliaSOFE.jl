@@ -2,34 +2,39 @@ __precompile__()
 
 module JuliaSOFE
 
+using Reexport
+
+# Helpers
 include(joinpath(dirname(@__FILE__), "helpers.jl"))
-using .Helpers
+@reexport using .Helpers
 
+# Elements
 include(joinpath(dirname(@__FILE__), "elements", "Elements.jl"))
-using .Elements
-export LagrangeP1, LagrangeQ1
+@reexport using .Elements
 
+# Meshes
 include(joinpath(dirname(@__FILE__), "meshes", "Meshes.jl"))
-using .Meshes
-export Mesh, TensorProductMesh, UnitSquare, UnitCube, UnitTriangle
-export getNodes, getConnectivity, getEntities, getNumber
+@reexport using .Meshes
 
+# Quadrature
 include(joinpath(dirname(@__FILE__), "quadrature", "QuadRule.jl"))
-using .Quadrature
-export QuadRule, QuadRuleSimp1
+@reexport using .Quadrature
 
+# Spaces
 include(joinpath(dirname(@__FILE__), "spaces", "FESpace.jl"))
-using .Spaces
-export FESpace, dofMap
+@reexport using .Spaces
 
+# Operators
 include(joinpath(dirname(@__FILE__), "operators", "Operators.jl"))
-using .Operators
+@reexport using .Operators
 
+# Problems
 include(joinpath(dirname(@__FILE__), "problems", "Problems.jl"))
-using .Problems
+@reexport using .Problems
 
+# Postprocessing
 include(joinpath(dirname(@__FILE__), "postprocessing", "Visualization.jl"))
-using .Visualization
+@reexport using .Visualization
 
 end # of module JuliaSOFE
 

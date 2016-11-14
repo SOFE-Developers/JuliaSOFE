@@ -4,6 +4,11 @@ module Problems
 
 using ..Operators
 
+import ..Operators: assemble, assemble!
+
+export AbstractPDE, PDE
+export solve, assemble!, compute, system
+
 typealias Float AbstractFloat
 
 abstract AbstractPDE

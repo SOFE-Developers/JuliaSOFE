@@ -2,9 +2,11 @@ __precompile__()
 
 module Elements
 
-export AbstractElement, Element, PElement, QElement
+import ..Helpers: dimension
+
+export AbstractElement, PElement, QElement, Element
 export LagrangeP1, LagrangeQ1
-export type_, isnodal, dimension, order, nBasis, nVertices, dofTuple, nDoF, evalBasis
+export dimension, order, nBasis, nVertices, dofTuple, nDoF, evalBasis, isnodal
 
 abstract AbstractElement
 abstract PElement <: AbstractElement

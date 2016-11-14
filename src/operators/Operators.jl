@@ -9,9 +9,7 @@ using ..Quadrature
 using ..Helpers
 
 export AbstractOperator
-export space, coeff, matrix, vector, assemble, assemble!
-export Operator, IdId, GradGrad
-export Functional, Id
+export space, coeff, assemble, assemble!
 
 typealias Float AbstractFloat
 

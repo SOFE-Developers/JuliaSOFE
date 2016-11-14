@@ -8,7 +8,7 @@ using ..Elements
 using ..Meshes
 
 export AbstractFESpace, FESpace
-export mesh, element
+export mesh, element, shift
 export dofMap, nDoF, dofIndices, dofMask, extractDoFs
 export interpolate
 

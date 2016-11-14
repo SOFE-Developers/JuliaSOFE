@@ -2,36 +2,36 @@ __precompile__()
 
 module Quadrature
 
-typealias Float AbstractFloat
-
 export AbstractQuadRule, QuadRule, QuadRuleSimp2
-export order, qpoints, qweights, quadData
+export qorder, qpoints, qweights, quadData
+
+typealias Float AbstractFloat
 
 abstract AbstractQuadRule
 
 #---------------#
 # Type QuadRule #
 #---------------#
-type QuadRule{X<:AbstractQuadRule} <: AbstractQuadRule
+type QuadRule{T<:AbstractQuadRule} <: AbstractQuadRule
     order :: Int
     points :: Tuple
     weights :: Tuple
 end
 
-function QuadRule{X<:AbstractQuadRule}(::Type{X}, order::Integer,
+function QuadRule{T<:AbstractQuadRule}(::Type{T}, order::Integer,
                                        points, weights)
-    return QuadRule{X}(order, points, weights)
+    return QuadRule{T}(order, points, weights)
 end
 
 # Associated Methods
 # -------------------
 """
 
-    order(qr::AbstractQuadRule)
+    qorder(qr::AbstractQuadRule)
 
   Return the maximum polynomial order for which the quadrature rule is exact.
 """
-@inline order(qr::AbstractQuadRule) = qr.order
+@inline qorder(qr::AbstractQuadRule) = qr.order
 
 """
 

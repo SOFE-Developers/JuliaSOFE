@@ -4,7 +4,6 @@ module Meshes
 
 export AbstractMesh, Mesh
 export dimension, topology, nodes, entities, number
-export evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
 
 using ..Elements
 import ..Elements: dimension
