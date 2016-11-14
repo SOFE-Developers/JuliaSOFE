@@ -59,7 +59,7 @@ function assemble(op::Operator, d::Integer)
     qpoints, qweights = quadData(op.quadrule, d)
     
     fes = space(op)
-    dMap = dofMap(fes, d)
+    dMap = dofMap(fes, d=d)
     ndof = nDoF(fes)
     
     nB, nE = size(dMap)
@@ -91,7 +91,7 @@ function assemble(fnc::Functional, d::Integer)
     qpoints, qweights = quadData(fnc.quadrule, d)
 
     fes = space(fnc)
-    dMap = dofMap(fes, d)
+    dMap = dofMap(fes, d=d)
     ndof = Spaces.nDoF(fes)
 
     nB, nE = size(dMap)

@@ -2,23 +2,26 @@ __precompile__()
 
 module Elements
 
-export AbstractElement, Element, PElement, QElement, LagrangeP1, LagrangeQ1
-export dimension, type_, order, nBasis, nVertices, dofTuple, nDoF, evalBasis, isnodal
+export AbstractElement, Element, PElement, QElement
+export LagrangeP1, LagrangeQ1
+export type_, isnodal, dimension, order, nBasis, nVertices, dofTuple, nDoF, evalBasis
 
 abstract AbstractElement
 abstract PElement <: AbstractElement
 abstract QElement <: AbstractElement
+
+typealias ElementTypes Union{PElement, QElement}
 
 typealias Float AbstractFloat
 
 #--------------#
 # Type Element #
 #--------------#
-type Element{E<:AbstractElement} <: AbstractElement
+type Element{T<:ElementTypes} <: AbstractElement
     dimension :: Int
     type_ :: Type
 end
-Element{E<:AbstractElement}(::Type{E}, dim::Integer) = Element{E}(dim, E)
+Element{T<:ElementTypes}(::Type{T}, dim::Integer) = Element{T}(dim, T)
 
 # Associated methods
 # -------------------
@@ -63,16 +66,16 @@ end
   The number of vertices that define the `d`-dimensional
   entities of the element.
 """
-@inline nVertices(el::AbstractElement, d::Integer) = nVertices(el)[d]
-@inline nVertices{E<:PElement}(el::Element{E}) = tuple(2:(dimension(el)+1)...)
-@inline nVertices{E<:QElement}(el::Element{E}) = tuple(2.^(1:dimension(el))...)
+@inline nVertices(el::Element, d::Integer) = nVertices(el)[d]
+@inline nVertices{T<:PElement}(el::Element{T}) = tuple(2:(dimension(el)+1)...)
+@inline nVertices{T<:QElement}(el::Element{T}) = tuple(2.^(1:dimension(el))...)
 
-@inline nDoF(el::AbstractElement) = nDoF(el, dimension(el))
-function nDoF{E<:PElement}(el::Element{E}, d::Integer)
+@inline nDoF(el::Element) = nDoF(el, dimension(el))
+function nDoF{T<:PElement}(el::Element{T}, d::Integer)
     #return map(*, dofTuple(el), binomial(dimension(el)+1, k) for k = 1:dimension(el)+1)
     return map(*, dofTuple(el), binomial(d+1, k) for k = 1:d+1)
 end
-function nDoF{E<:QElement}(el::Element{E})
+function nDoF{T<:QElement}(el::Element{T})
     if dimension(el) == 1
         return map(*, dofTuple(el), (2,1))
     elseif dimension(el) == 2

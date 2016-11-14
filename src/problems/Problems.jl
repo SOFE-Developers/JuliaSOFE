@@ -1,6 +1,6 @@
 __precompile__()
 
-module PDE
+module Problems
 
 using ..Operators
 
@@ -48,7 +48,7 @@ function compute(pde::AbstractPDE)
 
     A, b = system(pde)
 
-    u = zeros(free)
+    u = zeros(Float32, free)
     u[!free] = w[!free]
     u[free] = w[free] + A[free,free]\(b-A*w)[free]
 
@@ -69,4 +69,4 @@ function system(pde::AbstractPDE)
     return A, b
 end
 
-end # of module PDE
+end # of module Problems
