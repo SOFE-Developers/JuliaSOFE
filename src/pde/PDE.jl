@@ -43,7 +43,30 @@ function assemble!(pde::AbstractPDE)
 end
 
 function compute(pde::AbstractPDE)
-    
+    free = space(pde).freeDof
+    w = interpolate(space(pde), shift(space(pde)))
+
+    A, b = system(pde)
+
+    u = zeros(free)
+    u[!free] = w[!free]
+    u[free] = w[free] + A[free,free]\(b-A*w)[free]
+
+    return u
+end
+
+function system(pde::AbstractPDE)
+    A = matrix(pde.lhs[1])
+    for k = 2:length(pde.lhs)
+        A += matrix(pde.lhs[k])
+    end
+
+    b = vector(pde.rhs[1])
+    for k = 2:length(pde.rhs)
+        b += vector(pde.rhs[k])
+    end
+
+    return A, b
 end
 
 end # of module PDE
