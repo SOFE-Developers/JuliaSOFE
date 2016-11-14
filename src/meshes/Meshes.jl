@@ -2,7 +2,8 @@ __precompile__()
 
 module Meshes
 
-export AbstractMesh, Mesh, TensorProductMesh, UnitSquare, UnitCube
+export AbstractMesh, Mesh
+export dimension, topology, nodes, entities
 export evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
 
 using ..Elements
@@ -29,9 +30,9 @@ type Mesh <: AbstractMesh
     function Mesh{T<:Float, S<:Integer}(nodes::AbstractArray{T,2},
                                         cells::AbstractArray{S,2})
         dim = size(nodes, 2)
-        if size(cells, 2) == 3
+        if size(cells, 2) == dim + 1
             element = LagrangeP1(dim)
-        elseif size(cells, 2) == 4
+        elseif (dim == 2) & (size(cells, 2) == 4)
             element = LagrangeQ1(dim)
         else
             error()
@@ -59,6 +60,23 @@ end
   Return the topology of the mesh.
 """
 @inline topology(m::Mesh) = getfield(m, :topology)
+
+"""
+
+    nodes(m::Mesh)
+
+  Return the node coordinates of the mesh.
+"""
+Topology.nodes(m::Mesh) = nodes(topology(m))
+
+"""
+
+    entities(m::Mesh, d::Integer)
+
+  Return the connectivity array for the mesh entities
+  of topological dimension `d`.
+"""
+Topology.entities(m::Mesh, d::Integer) = entities(topology(m), d)
 
 # Reference Maps
 include("refmaps.jl")

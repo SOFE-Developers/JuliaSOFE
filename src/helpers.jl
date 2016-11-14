@@ -2,15 +2,19 @@ module Helpers
 
 export tensorprod, lagrangeNodesP, ndarray
 
+function tensorprod{T}(gridx::AbstractArray{T,1})
+    return hcat([i for i in gridx])
+end
+
 function tensorprod{T}(gridx::AbstractArray{T,1}, gridy::AbstractArray{T,1})
-    return hcat([j for i in gridx for j in gridy],
-                [i for i in gridx for j in gridy])
+    return hcat([i for i in gridx for j in gridy],
+                [j for i in gridx for j in gridy])
 end
 
 function tensorprod{T}(gridx::AbstractArray{T,1}, gridy::AbstractArray{T,1}, gridz::AbstractArray{T,1})
-    return hcat([k for i in gridx for j in gridy for k in gridz],
+    return hcat([i for i in gridx for j in gridy for k in gridz],
                 [j for i in gridx for j in gridy for k in gridz],
-                [i for i in gridx for j in gridy for k in gridz])
+                [k for i in gridx for j in gridy for k in gridz])
 end
 
 """
