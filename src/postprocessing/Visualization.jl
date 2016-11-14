@@ -41,7 +41,8 @@ function showMesh(m::Mesh)
     end
 end
 
-function showElement(el::Element, i::Integer, resolution::Integer=100)
+function showElement(el::Element, i::Integer; resolution::Integer=100,
+                     size::Integer=2, alpha::AbstractFloat=1.)
     D = Elements.dimension(el)
     m = visgrid(el, resolution)
     n = nodes(m)
@@ -58,10 +59,9 @@ function showElement(el::Element, i::Integer, resolution::Integer=100)
         pyvisofe[:trisurface](x, y, z, faces)
     elseif D == 3
         x = n[:,1]; y = n[:,2]; z = n[:,3]
-        #vertex_colors = ...
-        faces = entities(m, 2) - 1
-
-        pyvisofe[:scatter3d](x, y, z, faces)
+        c = basis[i,:]
+        pyvisofe[:scatter3d](x, y, z, c=c,
+                             size=size, alpha=alpha)
     end
 end
     
