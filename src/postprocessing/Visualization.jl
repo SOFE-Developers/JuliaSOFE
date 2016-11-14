@@ -57,7 +57,11 @@ function showElement(el::Element, i::Integer, resolution::Integer=100)
 
         pyvisofe[:trisurface](x, y, z, faces)
     elseif D == 3
-        error("Not Implemented!")
+        x = n[:,1]; y = n[:,2]; z = n[:,3]
+        #vertex_colors = ...
+        faces = entities(m, 2) - 1
+
+        pyvisofe[:scatter3d](x, y, z, faces)
     end
 end
     
