@@ -4,6 +4,8 @@ export AbstractMeshTopology
 export MeshTopology, getDim, getNodes, getConnectivity, getEntities, getNumber
 export dimension, nodes, connectivity, entities
 
+import ..Meshes: dimension
+
 #-----------------------------#
 # Abstract Mesh Topology Type #
 #-----------------------------#
@@ -18,7 +20,7 @@ abstract AbstractMeshTopology
   Return the spatial dimension of the mesh topology,
   i.e. the topological dimension of the cells.
 """
-@inline dimension(mt::AbstractMeshTopology) = mt.dimension
+@inline dimension(mt::AbstractMeshTopology) = getfield(mt, :dimension)
 @inline getDim(mt::AbstractMeshTopology) = dimension(mt)
 
 """
@@ -27,7 +29,7 @@ abstract AbstractMeshTopology
 
   Return the coordinates of the mesh vertices.
 """
-@inline nodes(mt::AbstractMeshTopology) = mt.nodes
+@inline nodes(mt::AbstractMeshTopology) = getfield(mt, :nodes)
 @inline getNodes(mt::AbstractMeshTopology) = nodes(mt)
 
 """

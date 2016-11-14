@@ -2,6 +2,8 @@ import Combinatorics: combinations
 
 export MeshTopology
 export incidence!, incidence, connectivity!, connectivity
+export entities!, entities, number!, number
+export boundary
 #export init!,  build!, build, transpose!, transpose, intersection!, intersection
 
 include("connectivity.jl")
@@ -68,6 +70,9 @@ connectivity(mt::MeshTopology, d::Integer, dd::Integer) = incidence(mt, d, dd)[:
 entities!(mt::MeshTopology, d::Integer) = connectivity!(mt, d, 0)
 entities(mt::MeshTopology, d::Integer) = connectivity(mt, d, 0)
 
+number!(mt::MeshTopology, d::Integer) = size(entities!(mt, d), 1)
+number(mt::MeshTopology, d::Integer) = size(entities(mt, d), 1)
+
 """
 
     boundary(mt::MeshTopology)
@@ -75,7 +80,6 @@ entities(mt::MeshTopology, d::Integer) = connectivity(mt, d, 0)
   Return a boolean mask marking the boundary facets of the mesh.
 """
 boundary(mt::MeshTopology) = boundary(mt::MeshTopology, dimension(mt)-1)
-getBoundary(mt::MeshTopology) = boundary(mt)
 
 """
 
@@ -120,7 +124,6 @@ function boundary(mt::MeshTopology, f::Function)
     mask &= f(centroids)
     return mask
 end
-getBoundary(mt::MeshTopology, f::Function) = boundary(mt, f)
 
 # Initialization and incidence computation
 # -----------------------------------------

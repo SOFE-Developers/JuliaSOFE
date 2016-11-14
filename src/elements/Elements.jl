@@ -3,7 +3,7 @@ __precompile__()
 module Elements
 
 export AbstractElement, Element, PElement, QElement, LagrangeP1, LagrangeQ1
-export dimension, type_, order, nBasis, nVertices, dofTuple, nDoF, evalBasis
+export dimension, type_, order, nBasis, nVertices, dofTuple, nDoF, evalBasis, isnodal
 
 abstract AbstractElement
 abstract PElement <: AbstractElement
@@ -118,6 +118,7 @@ type LagrangeP1 <: PElement
 end
 LagrangeP1(dim::Integer) = Element(LagrangeP1, dim)
 
+isnodal(::Element{LagrangeP1}) = true
 order(::Element{LagrangeP1}) = 1
 nBasis(el::Element{LagrangeP1}) = tuple(2:(dimension(el)+1)...)
 dofTuple(el::Element{LagrangeP1}) = (1, 0, 0, 0)[1:dimension(el)+1]
@@ -155,6 +156,7 @@ type LagrangeQ1 <: QElement
 end
 LagrangeQ1(dim::Integer) = Element(LagrangeQ1, dim)
 
+isnodal(::Element{LagrangeQ1}) = true
 order(::Element{LagrangeQ1}) = 1
 nBasis(el::Element{LagrangeQ1}) = tuple(2.^(1:dimension(el))...)
 dofTuple(el::Element{LagrangeQ1}) = (1, 0, 0, 0)[1:dimension(el)+1]

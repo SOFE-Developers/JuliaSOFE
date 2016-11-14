@@ -3,13 +3,15 @@ __precompile__()
 module Meshes
 
 export AbstractMesh, Mesh
-export dimension, topology, nodes, entities
+export dimension, topology, nodes, entities, number
 export evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
 
 using ..Elements
+import ..Elements: dimension
 
 include("topology.jl")
 using .Topology
+export boundary
 export getNodes, getConnectivity, getEntities, getNumber
 
 #--------------------#
@@ -77,6 +79,15 @@ Topology.nodes(m::Mesh) = nodes(topology(m))
   of topological dimension `d`.
 """
 Topology.entities(m::Mesh, d::Integer) = entities(topology(m), d)
+
+"""
+
+    number(m::Mesh, d::Integer)
+
+  Return the number of mesh entities
+  of topological dimension `d`.
+"""
+Topology.number(m::Mesh, d::Integer) = number(topology(m), d)
 
 # Reference Maps
 include("refmaps.jl")
