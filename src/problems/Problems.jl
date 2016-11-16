@@ -59,7 +59,7 @@ function assemble!(pde::AbstractPDE)
 end
 
 function compute(pde::AbstractPDE)
-    free = space(pde).freeDoF
+    free = freeDof(space(pde))
     w = interpolate(space(pde), shift(space(pde)))
 
     A, b = system(pde)
