@@ -220,16 +220,16 @@ function evaluate{T<:AbstractFloat}(fes::FESpace, dof::AbstractVector{T},
     nP, dimP = size(points)
     dofmap = dofMap(fes, d=dimP)
     nB, nE = size(dofmap)
-    basis = reshape(evalBasis(element(fes), points, deriv), (nB,nP,1))
-    nB, nP, nD, nW = size(basis, 1:4...)
+    basis = evalBasis(element(fes), points, deriv)
+    nB, nP, nC, nD = size(basis, 1:4...)
 
     if deriv == 0
-        @assert nW == 1
-        U = zeros(T,nE,nP,nD)
+        @assert nD == 1
+        U = zeros(T,nE,nP,nC)
     elseif deriv == 1
-        U = zeros(T,nE,nP,nD,nW)
+        U = zeros(T,nE,nP,nC,nD)
     elseif deriv == 2
-        U = zeros(T,nE,nP,nD,nW,nW)
+        U = zeros(T,nE,nP,nC,nD,nD)
     end
 
     fill_dofvalues!(U, basis, dof, dofmap)
@@ -237,17 +237,17 @@ function evaluate{T<:AbstractFloat}(fes::FESpace, dof::AbstractVector{T},
     return U
 end
 
-function fill_dofvalues!{T<:AbstractFloat}(U::Array{T,3}, basis::Array{T,3},
+function fill_dofvalues!{T<:AbstractFloat}(U::AbstractArray{T,3}, basis::Array{T,3},
                                    dof::AbstractVector{T}, dofmap::Array{Int,2})
-    nE, nP, nD = size(U)
-    nB, nP, nD = size(basis)
+    nE, nP, nC = size(U)
+    nB, nP, nC = size(basis)
     nB, nE = size(dofmap)
     
-    for id = 1:nD
+    for ic = 1:nC
         for ip = 1:nP
             for ie = 1:nE
                 for ib = 1:nB
-                    U[ie,ip,id] += dof[dofmap[ib,ie]] * basis[ib,ip,id]
+                    U[ie,ip,ic] += dof[dofmap[ib,ie]] * basis[ib,ip,ic]
                 end
             end
         end
@@ -258,12 +258,12 @@ end
 
 function fill_dofvalues!{T<:AbstractFloat}(U::Array{T,4}, basis::Array{T,4},
                                    dof::AbstractVector{T}, dofmap::Array{Int,2})
-    nE, nP, nD, nW = size(U)
-    nB, nP, nD, nW = size(basis)
+    nE, nP, nC, nD = size(U)
+    nB, nP, nC, nD = size(basis)
     nB, nE = size(dofmap)
     
-    for iw = 1:nW
-        fill_dofvalues!(view(U, :, :, :, iw), basis[:,:,:,iw], dof, dofmap)
+    for id = 1:nD
+        fill_dofvalues!(view(U, :, :, :, id), basis[:,:,:,id], dof, dofmap)
     end
 
     return nothing
@@ -271,13 +271,13 @@ end
 
 function fill_dofvalues!{T<:AbstractFloat}(U::Array{T,5}, basis::Array{T,5},
                                    dof::AbstractVector{T}, dofmap::Array{Int,2})
-    nE, nP, nD, nWi, nWj = size(U)
-    nB, nP, nD, nWi, nWj = size(basis)
+    nE, nP, nC, nDi, nDj = size(U)
+    nB, nP, nC, nDi, nDj = size(basis)
     nB, nE = size(dofmap)
 
-    for jw = 1:nWj
-        for iw = 1:nWi
-            fill_dofvalues!(view(U, :, :, :, iw, jw), basis[:,:,:,iw,jw], dof, dofmap)
+    for jd = 1:nDj
+        for id = 1:nDi
+            fill_dofvalues!(view(U, :, :, :, id, jd), basis[:,:,:,id,jd], dof, dofmap)
         end
     end
 
