@@ -7,7 +7,7 @@ import ..Elements: nDoF
 using ..Elements
 using ..Meshes
 
-export AbstractFESpace, FESpace
+export AbstractFESpace, FESpace, MixedFESpace
 export mesh, element, domain, domain!, shift, shift!
 export dofMap, nDoF, dofIndices, dofMask, extractDoFs, fixedDoF, freeDoF
 export interpolate
@@ -234,5 +234,10 @@ nDoF(mfes::MixedFESpace, i::Integer) = nDoF(subspace(mfes, i))
 
 Base.getindex(mfes::MixedFESpace, i::Integer) = subspace(mfes, i)
 Base.length(mfes::MixedFESpace) = length(subspaces(mfes))
+Base.start(::MixedFESpace) = 1
+Base.next(mfes::MixedFESpace, state::Integer) = (subspace(mfes, state), state+1)
+Base.done(mfes::MixedFESpace, state::Integer) = state > length(mfes)
+Base.eltype(::Type{MixedFESpace}) = FESpace
+Base.endof(mfes::MixedFESpace) = length(mfes)
 
 end # of module Spaces

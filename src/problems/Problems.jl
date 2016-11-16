@@ -39,7 +39,9 @@ PDE(lhs::Operator, rhs::Functional) = PDE([lhs], [rhs])
 
 # Associated Methods
 # -------------------
-space(pde::AbstractPDE) = space(pde.lhs[1])
+lhs(pde::AbstractPDE) = getfield(pde, :lhs)
+rhs(pde::AbstractPDE) = getfield(pde, :rhs)
+space(pde::AbstractPDE) = MixedFESpace(map(space, lhs(pde))...)
 
 function solve(pde::AbstractPDE)
     assemble!(pde)
@@ -59,12 +61,13 @@ function assemble!(pde::AbstractPDE)
 end
 
 function compute(pde::AbstractPDE)
-    free = freeDof(space(pde))
-    w = interpolate(space(pde), shift(space(pde)))
-
+    free = freeDoF(space(pde))
+    #w = interpolate(space(pde), shift(space(pde)))
+    w = vcat([interpolate(fes, shift(fes)) for fes in space(pde)]...)
+    
     A, b = system(pde)
 
-    u = zeros(Float32, free)
+    u = zeros(Float32, nDoF(space(pde)))
     u[!free] = w[!free]
     u[free] = w[free] + A[free,free]\(b-A*w)[free]
 
