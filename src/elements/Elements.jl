@@ -99,18 +99,19 @@ end
 function evalBasis{T<:AbstractFloat}(el::Element,
                                      points::AbstractArray{T,2},
                                      deriv::Integer=0)
-    nP, nD = size(points)
-    nB = nBasis(el, nD)
+    nP, nW = size(points)
+    nB = nBasis(el, nW)
+    nC = 1
 
     if deriv == 0
-        B = zeros(T, nB, nP)
-        return evalD0Basis!(el, points, B) # nB x nP
+        B = zeros(T, nB, nP, nC)
+        return evalD0Basis!(el, points, B) # nB x nP x nC
     elseif deriv == 1
-        B = zeros(T, nB, nP, nD)
-        return evalD1Basis!(el, points, B) # nB x nP x nD
+        B = zeros(T, nB, nP, nC, nW)
+        return evalD1Basis!(el, points, B) # nB x nP x nC x nW
     elseif deriv == 2
-        B = zeros(T, nB, nP, nD, nD)
-        return evalD2Basis!(el, points, B) # nB x nP x nD x nD
+        B = zeros(T, nB, nP, nC, nW, nW)
+        return evalD2Basis!(el, points, B) # nB x nP x nC x nW x nW
     else
         error("Invalid derivation order! ($deriv)")
     end
@@ -130,26 +131,26 @@ dofTuple(el::Element{LagrangeP1}) = (1, 0, 0, 0)[1:dimension(el)+1]
 
 # Associated Methods
 # -------------------
-function evalD0Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,2})
+function evalD0Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,3})
     for ip = 1:size(points, 1)
-        out[1,ip] = one(T)
+        out[1,ip,1] = one(T)
         for id = 1:size(points, 2)
-            out[1,ip] -= points[ip,id]
-            out[id+1,ip] = points[ip,id]
+            out[1,ip,1] -= points[ip,id]
+            out[id+1,ip,1] = points[ip,id]
         end
     end
     return out
 end
 
-function evalD1Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,3})
-    out[1,:,:] = -one(T)
+function evalD1Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,4})
+    out[1,:,1,:] = -one(T)
     for k = 1:size(out, 1)-1
-        out[k+1,:,k] = one(T)
+        out[k+1,:,1,k] = one(T)
     end
     return out
 end
 
-function evalD2Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,4})
+function evalD2Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,5})
     out[:] = zero(T)
     return out
 end
@@ -171,22 +172,22 @@ dofTuple(el::Element{LagrangeQ1}) = (1, 0, 0, 0)[1:dimension(el)+1]
 function evalD0Basis!{T<:Float}(el::Element{LagrangeQ1}, points::AbstractArray{T,2}, out::Array{T,3})
     nD = size(points, 2)
     if nD == 1
-        out[1,:] = 1-points[:,1];
-        out[2,:] = points[:,1];
+        out[1,:,1] = 1-points[:,1];
+        out[2,:,1] = points[:,1];
     elseif nD == 2
-        out[1,:] = (1-points[:,1]).*(1-points[:,2]);
-        out[2,:] = points[:,1].*(1-points[:,2]);
-        out[3,:] = (1-points[:,1]).*points[:,2];
-        out[4,:] = points[:,1].*points[:,2];
+        out[1,:,1] = (1-points[:,1]).*(1-points[:,2]);
+        out[2,:,1] = points[:,1].*(1-points[:,2]);
+        out[3,:,1] = (1-points[:,1]).*points[:,2];
+        out[4,:,1] = points[:,1].*points[:,2];
     elseif nD == 3
-        out[1,:] = (1-points[:,1]).*(1-points[:,2]).*(1-points[:,3]);
-        out[2,:] = points[:,1].*(1-points[:,2]).*(1-points[:,3]);
-        out[3,:] = (1-points[:,1]).*points[:,2].*(1-points[:,3]);
-        out[4,:] = points[:,1].*points[:,2].*(1-points[:,3]);
-        out[5,:] = (1-points[:,1]).*(1-points[:,2]).*points[:,3];
-        out[6,:] = points[:,1].*(1-points[:,2]).*points[:,3];
-        out[7,:] = (1-points[:,1]).*points[:,2].*points[:,3];
-        out[8,:] = points[:,1].*points[:,2].*points[:,3];
+        out[1,:,1] = (1-points[:,1]).*(1-points[:,2]).*(1-points[:,3]);
+        out[2,:,1] = points[:,1].*(1-points[:,2]).*(1-points[:,3]);
+        out[3,:,1] = (1-points[:,1]).*points[:,2].*(1-points[:,3]);
+        out[4,:,1] = points[:,1].*points[:,2].*(1-points[:,3]);
+        out[5,:,1] = (1-points[:,1]).*(1-points[:,2]).*points[:,3];
+        out[6,:,1] = points[:,1].*(1-points[:,2]).*points[:,3];
+        out[7,:,1] = (1-points[:,1]).*points[:,2].*points[:,3];
+        out[8,:,1] = points[:,1].*points[:,2].*points[:,3];
     else
         error("Invalid point dimension ", nD)
     end
@@ -196,49 +197,49 @@ end
 function evalD1Basis!{T<:Float}(el::Element{LagrangeQ1}, points::AbstractArray{T,2}, out::Array{T,4})
     nD = size(points, 2)
     if nD == 1
-        out[1,:,:,1] = -1;
-        out[2,:,:,1] = 1;
+        out[1,:,1,1] = -1;
+        out[2,:,1,1] = 1;
     elseif nD == 2
-        out[1,:,:,1] = -(1-points[:,2]);
-        out[1,:,:,2] = -(1-points[:,1]);
-        out[2,:,:,1] = 1-points[:,2];
-        out[2,:,:,2] = -points[:,1];
-        out[3,:,:,1] = -points[:,2];
-        out[3,:,:,2] = 1-points[:,1];
-        out[4,:,:,1] = points[:,2];
-        out[4,:,:,2] = points[:,1];
+        out[1,:,1,1] = -(1-points[:,2]);
+        out[1,:,1,2] = -(1-points[:,1]);
+        out[2,:,1,1] = 1-points[:,2];
+        out[2,:,1,2] = -points[:,1];
+        out[3,:,1,1] = -points[:,2];
+        out[3,:,1,2] = 1-points[:,1];
+        out[4,:,1,1] = points[:,2];
+        out[4,:,1,2] = points[:,1];
     elseif nD == 3
-        out[1,:,:,1] = -(1-points[:,2]).*(1-points[:,3]);
-        out[1,:,:,2] = -(1-points[:,1]).*(1-points[:,3]);
-        out[1,:,:,3] = -(1-points[:,1]).*(1-points[:,2]);
+        out[1,:,1,1] = -(1-points[:,2]).*(1-points[:,3]);
+        out[1,:,1,2] = -(1-points[:,1]).*(1-points[:,3]);
+        out[1,:,1,3] = -(1-points[:,1]).*(1-points[:,2]);
 
-        out[2,:,:,1] = (1-points[:,2]).*(1-points[:,3]);
-        out[2,:,:,2] = -points[:,1].*(1-points[:,3]);
-        out[2,:,:,3] = -points[:,1].*(1-points[:,2]);
+        out[2,:,1,1] = (1-points[:,2]).*(1-points[:,3]);
+        out[2,:,1,2] = -points[:,1].*(1-points[:,3]);
+        out[2,:,1,3] = -points[:,1].*(1-points[:,2]);
 
-        out[3,:,:,1] = -points[:,2].*(1-points[:,3]);
-        out[3,:,:,2] = (1-points[:,1]).*(1-points[:,3]);
-        out[3,:,:,3] = -(1-points[:,1]).*points[:,2];
+        out[3,:,1,1] = -points[:,2].*(1-points[:,3]);
+        out[3,:,1,2] = (1-points[:,1]).*(1-points[:,3]);
+        out[3,:,1,3] = -(1-points[:,1]).*points[:,2];
 
-        out[4,:,:,1] = points[:,2].*(1-points[:,3]);
-        out[4,:,:,2] = points[:,1].*(1-points[:,3]);
-        out[4,:,:,3] = -points[:,1].*points[:,2];
+        out[4,:,1,1] = points[:,2].*(1-points[:,3]);
+        out[4,:,1,2] = points[:,1].*(1-points[:,3]);
+        out[4,:,1,3] = -points[:,1].*points[:,2];
 
-        out[5,:,:,1] = -(1-points[:,2]).*points[:,3];
-        out[5,:,:,2] = -(1-points[:,1]).*points[:,3];
-        out[5,:,:,3] = (1-points[:,1]).*(1-points[:,2]);
+        out[5,:,1,1] = -(1-points[:,2]).*points[:,3];
+        out[5,:,1,2] = -(1-points[:,1]).*points[:,3];
+        out[5,:,1,3] = (1-points[:,1]).*(1-points[:,2]);
         
-        out[6,:,:,1] = (1-points[:,2]).*points[:,3];
-        out[6,:,:,2] = -points[:,1].*points[:,3];
-        out[6,:,:,3] = points[:,1].*(1-points[:,2]);
+        out[6,:,1,1] = (1-points[:,2]).*points[:,3];
+        out[6,:,1,2] = -points[:,1].*points[:,3];
+        out[6,:,1,3] = points[:,1].*(1-points[:,2]);
         
-        out[7,:,:,1] = -points[:,2].*points[:,3];
-        out[7,:,:,2] = (1-points[:,1]).*points[:,3];
-        out[7,:,:,3] = (1-points[:,1]).*points[:,2];
+        out[7,:,1,1] = -points[:,2].*points[:,3];
+        out[7,:,1,2] = (1-points[:,1]).*points[:,3];
+        out[7,:,1,3] = (1-points[:,1]).*points[:,2];
         
-        out[8,:,:,1] = points[:,2].*points[:,3];
-        out[8,:,:,2] = points[:,1].*points[:,3];
-        out[8,:,:,3] = points[:,1].*points[:,2];
+        out[8,:,1,1] = points[:,2].*points[:,3];
+        out[8,:,1,2] = points[:,1].*points[:,3];
+        out[8,:,1,3] = points[:,1].*points[:,2];
     else
         error("Invalid point dimension ", nD)
     end
@@ -246,7 +247,7 @@ function evalD1Basis!{T<:Float}(el::Element{LagrangeQ1}, points::AbstractArray{T
 end
 
 function evalD2Basis!{T<:Float}(el::Element{LagrangeQ1}, points::AbstractArray{T,2}, out::Array{T,5})
-  out[:] = 0
+  out[:] = zero(T)
   return out
 end
 
