@@ -10,7 +10,7 @@ using ..Meshes
 export AbstractFESpace, FESpace, MixedFESpace
 export mesh, element, domain, domain!, shift, shift!
 export dofMap, nDoF, dofIndices, dofMask, extractDoFs, fixedDoF, freeDoF
-export interpolate
+export interpolate, evaluate
 
 abstract AbstractFESpace
 
@@ -207,37 +207,85 @@ function interpolate(m::Mesh, el::Element, f::Function)
 end
 interpolate(fes::FESpace, f::Function) = interpolate(fes.mesh, fes.element, f)
 
-#-------------------#
-# Type MixedFESpace #
-#-------------------#
-type MixedFESpace <: AbstractFESpace
-    subspaces :: Array{FESpace, 1}
+"""
+
+    evaluate{T<:AbstractFloat}(fes::FESpace, dofs::AbstractVector{T}, deriv::Integer=0)
+
+  Evaluate the linear combination of the finite element
+  space's basis functions or their derivatives in the 
+  given local `points` w.r.t. the given `dof` values.
+"""
+function evaluate{T<:AbstractFloat}(fes::FESpace, dof::AbstractVector{T},
+                                    points::AbstractArray{T,2}, deriv::Integer=0)
+    nP, dimP = size(points)
+    dofmap = dofMap(fes, d=dimP)
+    nB, nE = size(dofmap)
+    basis = reshape(evalBasis(element(fes), points, deriv), (nB,nP,1))
+    nB, nP, nD, nW = size(basis, 1:4...)
+
+    if deriv == 0
+        @assert nW == 1
+        U = zeros(T,nE,nP,nD)
+    elseif deriv == 1
+        U = zeros(T,nE,nP,nD,nW)
+    elseif deriv == 2
+        U = zeros(T,nE,nP,nD,nW,nW)
+    end
+
+    fill_dofvalues!(U, basis, dof, dofmap)
+
+    return U
 end
-MixedFESpace(spaces::FESpace...) = MixedFESpace([space for space in spaces])
 
-"""
+function fill_dofvalues!{T<:AbstractFloat}(U::Array{T,3}, basis::Array{T,3},
+                                   dof::AbstractVector{T}, dofmap::Array{Int,2})
+    nE, nP, nD = size(U)
+    nB, nP, nD = size(basis)
+    nB, nE = size(dofmap)
+    
+    for id = 1:nD
+        for ip = 1:nP
+            for ie = 1:nE
+                for ib = 1:nB
+                    U[ie,ip,id] += dof[dofmap[ib,ie]] * basis[ib,ip,id]
+                end
+            end
+        end
+    end
 
-    subspaces(mfes::MixedFESpace)
+    return nothing
+end
 
-  Return the each subspace of the mixed finite element space.
-"""
-subspaces(mfes::MixedFESpace) = getfield(mfes, :subspaces)
-subspace(mfes::MixedFESpace, i::Integer) = subspaces(mfes)[i]
+function fill_dofvalues!{T<:AbstractFloat}(U::Array{T,4}, basis::Array{T,4},
+                                   dof::AbstractVector{T}, dofmap::Array{Int,2})
+    nE, nP, nD, nW = size(U)
+    nB, nP, nD, nW = size(basis)
+    nB, nE = size(dofmap)
+    
+    for iw = 1:nW
+        fill_dofvalues!(view(U, :, :, :, iw), basis[:,:,:,iw], dof, dofmap)
+    end
 
-fixedDoF(mfes::MixedFESpace) = mapreduce(fixedDoF, vcat, subspaces(mfes))
-freeDoF(mfes::MixedFESpace) = mapreduce(freeDoF, vcat, subspaces(mfes))
-nDoF(mfes::MixedFESpace) = mapreduce(nDoF, +, subspaces(mfes))
+    return nothing
+end
 
-fixedDoF(mfes::MixedFESpace, i::Integer) = fixedDoF(subspace(mfes, i))
-freeDoF(mfes::MixedFESpace, i::Integer) = freeDoF(freeDoF(subspace(mfes, i)))
-nDoF(mfes::MixedFESpace, i::Integer) = nDoF(subspace(mfes, i))
+function fill_dofvalues!{T<:AbstractFloat}(U::Array{T,5}, basis::Array{T,5},
+                                   dof::AbstractVector{T}, dofmap::Array{Int,2})
+    nE, nP, nD, nWi, nWj = size(U)
+    nB, nP, nD, nWi, nWj = size(basis)
+    nB, nE = size(dofmap)
 
-Base.getindex(mfes::MixedFESpace, i::Integer) = subspace(mfes, i)
-Base.length(mfes::MixedFESpace) = length(subspaces(mfes))
-Base.start(::MixedFESpace) = 1
-Base.next(mfes::MixedFESpace, state::Integer) = (subspace(mfes, state), state+1)
-Base.done(mfes::MixedFESpace, state::Integer) = state > length(mfes)
-Base.eltype(::Type{MixedFESpace}) = FESpace
-Base.endof(mfes::MixedFESpace) = length(mfes)
+    for jw = 1:nWj
+        for iw = 1:nWi
+            fill_dofvalues!(view(U, :, :, :, iw, jw), basis[:,:,:,iw,jw], dof, dofmap)
+        end
+    end
+
+    return nothing
+end
+
+# Mixed finite element spaces
+# ----------------------------
+include("mixed.jl")
 
 end # of module Spaces
