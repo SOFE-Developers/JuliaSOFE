@@ -20,7 +20,7 @@ abstract AbstractFESpace
 type FESpace{Tm<:AbstractMesh, Te<:AbstractElement} <: AbstractFESpace
     mesh :: Tm
     element :: Te
-    freeDOF :: Array{Bool, 1}
+    freeDoF :: Array{Bool, 1}
     shift :: Function
 end
 
@@ -29,7 +29,7 @@ function FESpace{Tm<:AbstractMesh, Te<:AbstractElement}(m::Tm, el::Te,
                                                         shift::Function=x->zeros(size(x,1)))
     fes = FESpace{Tm,Te}(m, el, [], shift)
 
-    fes.freeDOF = !extractDoF(fes, d=dimension(m)-1, mask=boundary(topology(m), bfnc))
+    fes.freeDoF = !extractDoF(fes, d=dimension(m)-1, mask=boundary(topology(m), bfnc))
 
     return fes
 end

@@ -2,9 +2,10 @@ __precompile__()
 
 module Problems
 
+using ..Spaces
 using ..Operators
 
-import ..Operators: assemble, assemble!
+import ..Operators: space, assemble, assemble!
 
 export AbstractPDE, PDE
 export solve, assemble!, compute, system
@@ -22,14 +23,24 @@ type PDE{T<:AbstractPDE} <: AbstractPDE
     solution :: Array{Float,1}
 end
 
+type GenericPDE <: AbstractPDE
+end
+
 # Outer Constructors
 # -------------------
-function PDE{T<:AbstractPDE}(::Type{T}, lhs::AbstractArray{Operator,1}, rhs::AbstractArray{Functional,1})
+function PDE{T<:AbstractPDE,To<:Operator,Tf<:Functional}(::Type{T},
+                                                         lhs::AbstractArray{To,1},
+                                                         rhs::AbstractArray{Tf,1})
     return PDE{T}(lhs, rhs, [])
 end
+PDE{T<:AbstractPDE}(::Type{T}, lhs::Operator, rhs::Functional) = PDE([lhs], [rhs])
+PDE{To<:Operator,Tf<:Functional}(lhs::AbstractArray{To,1}, rhs::AbstractArray{Tf,1}) = PDE(GenericPDE, lhs, rhs)
+PDE(lhs::Operator, rhs::Functional) = PDE([lhs], [rhs])
 
 # Associated Methods
 # -------------------
+space(pde::AbstractPDE) = space(pde.lhs[1])
+
 function solve(pde::AbstractPDE)
     assemble!(pde)
     compute(pde)
@@ -48,7 +59,7 @@ function assemble!(pde::AbstractPDE)
 end
 
 function compute(pde::AbstractPDE)
-    free = space(pde).freeDof
+    free = space(pde).freeDoF
     w = interpolate(space(pde), shift(space(pde)))
 
     A, b = system(pde)

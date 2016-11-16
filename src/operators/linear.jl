@@ -19,7 +19,7 @@ end
 # Outer Constructors
 # -------------------
 function Functional{C<:AbstractCoefficient,V<:AbstractOperator}(::Type{V}, fes::FESpace, coeff::C)
-    if issubtype(type_(fes.element), PElement)
+    if issubtype(Elements.type_(fes.element), PElement)
         qrule = QuadRuleSimp2()
     else
         error("Currently only simplical elements supported...")
