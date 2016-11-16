@@ -8,75 +8,101 @@ export evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
   at given local points on the reference domain.
 """
 function evalReferenceMaps{T<:Float}(m::Mesh, points::AbstractArray{T,2}, deriv::Integer=0)
-    nP, nD = size(points)
+    nP, dimP = size(points)
 
-    nodes = getNodes(m.topology)
-    nW = size(nodes, 2)
+    coords = nodes(topology(m))
+    nW = size(coords, 2)
 
     basis = evalBasis(m.element, points, deriv)
-    nB = size(basis, 1)
-
-    elems = getEntities(m.topology, nD)
+    nB, nP, nC, nD, nDD = size(basis, 1:5...)
+    @assert nC == 1 "nC = $nC == 1"
+    
+    elems = entities(topology(m), dimP)
     nE = size(elems, 1)
     @assert nB == size(elems, 2)
 
     if deriv == 0
+        @assert nD == 1
         R = zeros(T, nE, nP, nW)
     elseif deriv == 1
+        @assert nD == dimP "nD = $nD == $dimP = dimP"
         R = zeros(T, nE, nP, nW, nD)
     elseif deriv == 2
-        R = zeros(T, nE, nP, nW, nD, nD)
+        @assert nD == dimP "nD = $nD == $nDD = nDD"
+        R = zeros(T, nE, nP, nW, nD, nDD)
     end
 
-    fill_RefMaps!(R, nodes, elems, basis)
+    fill_refmaps!(R, coords, elems, basis)
 
     return R
 end
 
-@noinline function fill_RefMaps!{T<:Float}(R::Array{T,3}, nodes::Array{T,2},
-                                           elems::Array{Int,2}, basis::Array{T,2})
+@noinline function fill_refmaps!{T<:Float}(R::AbstractArray{T,3}, nodes::Array{T,2},
+                                           elems::Array{Int,2}, basis::Array{T,3})
     for iw = 1:size(R,3) # nW
         for ip = 1:size(R,2) # nP
             for ie = 1:size(R,1) # nE
                 for ib = 1:size(basis,1) # nB
-                    R[ie,ip,iw] += nodes[elems[ie,ib],iw] * basis[ib,ip]
+                    R[ie,ip,iw] += nodes[elems[ie,ib],iw] * basis[ib,ip,1]
                 end
             end
         end
     end
+
+    return nothing
 end
 
-@noinline function fill_RefMaps!{T<:Float}(R::Array{T,4}, nodes::Array{T,2},
-                                           elems::Array{Int,2}, basis::Array{T,3})
-    for id = 1:size(R,4) # nD
-        for iw = 1:size(R,3) # nW
-            for ip = 1:size(R,2) # nP
-                for ie = 1:size(R,1) # nE
-                    for ib = 1:size(basis,1) # nB
-                        R[ie,ip,iw,id] += nodes[elems[ie,ib],iw] * basis[ib,ip,id]
-                    end
-                end
-            end
-        end
-    end
-end
-
-@noinline function fill_RefMaps!{T<:Float}(R::Array{T,5}, nodes::Array{T,2},
+@noinline function fill_refmaps!{T<:Float}(R::Array{T,4}, nodes::Array{T,2},
                                            elems::Array{Int,2}, basis::Array{T,4})
+    for id = 1:size(R,4) # nD
+        fill_refmaps!(view(R, :, :, :, id), nodes, elems, basis[:,:,:,id])
+    end
+
+    return nothing
+end
+
+@noinline function fill_refmaps!{T<:Float}(R::Array{T,5}, nodes::Array{T,2},
+                                           elems::Array{Int,2}, basis::Array{T,5})
     for jd = 1:size(R,5) # nD
         for id = 1:size(R,4) # nD
-            for iw = 1:size(R,3) # nW
-                for ip = 1:size(R,2) # nP
-                    for ie = 1:size(R,1) # nE
-                        for ib = 1:size(basis,1) # nB
-                            R[ie,ip,iw,id,jd] += nodes[elems[ie,ib],iw] * basis[ib,ip,id,jd]
-                        end
-                    end
-                end
-            end
+            fill_refmaps!(view(R, :, :, :, id, jd), nodes, elems, basis[:,:,:,id,jd])
         end
     end
+
+    return nothing
 end
+
+# @noinline function fill_refmaps!{T<:Float}(R::Array{T,4}, nodes::Array{T,2},
+#                                            elems::Array{Int,2}, basis::Array{T,4})
+#     for id = 1:size(R,4) # nD
+#         for iw = 1:size(R,3) # nW
+#             for ip = 1:size(R,2) # nP
+#                 for ie = 1:size(R,1) # nE
+#                     for ib = 1:size(basis,1) # nB
+#                         R[ie,ip,iw,id] += nodes[elems[ie,ib],iw] * basis[ib,ip,1,id]
+#                     end
+#                 end
+#             end
+#         end
+#     end
+# end
+
+# @noinline function fill_refmaps!{T<:Float}(R::Array{T,5}, nodes::Array{T,2},
+#                                            elems::Array{Int,2}, basis::Array{T,5})
+#     for jd = 1:size(R,5) # nD
+#         for id = 1:size(R,4) # nD
+#             for iw = 1:size(R,3) # nW
+#                 for ip = 1:size(R,2) # nP
+#                     for ie = 1:size(R,1) # nE
+#                         for ib = 1:size(basis,1) # nB
+#                             R[ie,ip,iw,id,jd] += nodes[elems[ie,ib],iw] * basis[ib,ip,1,id,jd]
+#                         end
+#                     end
+#                 end
+#             end
+#         end
+#     end
+# end
 
 """
 
