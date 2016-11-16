@@ -7,9 +7,9 @@ import ..Elements: nDoF
 using ..Elements
 using ..Meshes
 
-export AbstractFESpace, FESpace
-export mesh, element, shift
-export dofMap, nDoF, dofIndices, dofMask, extractDoFs
+export AbstractFESpace, FESpace, MixedFESpace
+export mesh, element, domain, domain!, shift, shift!
+export dofMap, nDoF, dofIndices, dofMask, extractDoFs, fixedDoF, freeDoF
 export interpolate
 
 abstract AbstractFESpace
@@ -20,18 +20,14 @@ abstract AbstractFESpace
 type FESpace{Tm<:AbstractMesh, Te<:AbstractElement} <: AbstractFESpace
     mesh :: Tm
     element :: Te
-    freeDoF :: Array{Bool, 1}
+    domain :: Function
     shift :: Function
 end
 
-function FESpace{Tm<:AbstractMesh, Te<:AbstractElement}(m::Tm, el::Te,
-                                                        bfnc::Function=x->falses(size(x,1)),
-                                                        shift::Function=x->zeros(size(x,1)))
-    fes = FESpace{Tm,Te}(m, el, [], shift)
-
-    fes.freeDoF = !extractDoF(fes, d=dimension(m)-1, mask=boundary(topology(m), bfnc))
-
-    return fes
+function FESpace{Tm<:AbstractMesh,Te<:AbstractElement}(mesh::Tm, element::Te)
+    domain = x -> falses(size(x,1))
+    shift = x -> zeros(size(x,1))
+    return FESpace{Tm,Te}(mesh, element, domain, shift)
 end
 
 # Associated Methods
@@ -42,7 +38,7 @@ end
 
   Return the mesh of the finite element space.
 """
-@inline mesh(fes::FESpace) = getfield(fes, :mesh)
+mesh(fes::FESpace) = getfield(fes, :mesh)
 
 """
 
@@ -50,15 +46,49 @@ end
 
   Return the reference element of the finite element space.
 """
-@inline element(fes::FESpace) = getfield(fes, :element)
+element(fes::FESpace) = getfield(fes, :element)
+
+"""
+
+    domain(fes::FESpace)
+
+  Return the domain function of the finite element space
+  that specifies the constrained boundary.
+"""
+domain(fes::FESpace) = getfield(fes, :domain)
+domain!(fes::FESpace, f::Function) = setfield!(fes, :domain, f)
 
 """
 
     shift(fes::FESpace)
 
-  Return the shift function of the finite element space.
+  Return the shift function that specifies a value on 
+  the constrained domain of the finite element space.
 """
-@inline shift(fes::FESpace) = getfield(fes, :shift)
+shift(fes::FESpace) = getfield(fes, :shift)
+shift!(fes::FESpace, f::Function) = setfield!(fes, :shift, f)
+
+"""
+
+    fixedDoF(fes::FESpace)
+
+  Return a boolean mask marking the constrained
+  degrees of freedom of the finite element space.
+"""
+function fixedDoF(fes::FESpace)
+    dim = dimension(mesh(fes)) - 1
+    bmask = boundary(mesh(fes), domain(fes))
+    return extractDoF(fes, d=dim, mask=bmask)
+end
+
+"""
+
+    freeDoF(fes::FESpace)
+
+  Return a boolean mask marking the unconstrained
+  degrees of freedom of the finite element space.
+"""
+freeDoF(fes::FESpace) = !fixedDoF(fes)
 
 """
 
@@ -115,7 +145,6 @@ end
   finite element space `fes`.
 """
 function nDoF(fes::FESpace)
-    #return maxabs(getDOFMap(fes, fes.mesh.dimension))
     return maxabs(dofMap(fes, d=dimension(mesh(fes))))
 end
 
@@ -177,5 +206,38 @@ function interpolate(m::Mesh, el::Element, f::Function)
     return f(n)
 end
 interpolate(fes::FESpace, f::Function) = interpolate(fes.mesh, fes.element, f)
+
+#-------------------#
+# Type MixedFESpace #
+#-------------------#
+type MixedFESpace <: AbstractFESpace
+    subspaces :: Array{FESpace, 1}
+end
+MixedFESpace(spaces::FESpace...) = MixedFESpace([space for space in spaces])
+
+"""
+
+    subspaces(mfes::MixedFESpace)
+
+  Return the each subspace of the mixed finite element space.
+"""
+subspaces(mfes::MixedFESpace) = getfield(mfes, :subspaces)
+subspace(mfes::MixedFESpace, i::Integer) = subspaces(mfes)[i]
+
+fixedDoF(mfes::MixedFESpace) = mapreduce(fixedDoF, vcat, subspaces(mfes))
+freeDoF(mfes::MixedFESpace) = mapreduce(freeDoF, vcat, subspaces(mfes))
+nDoF(mfes::MixedFESpace) = mapreduce(nDoF, +, subspaces(mfes))
+
+fixedDoF(mfes::MixedFESpace, i::Integer) = fixedDoF(subspace(mfes, i))
+freeDoF(mfes::MixedFESpace, i::Integer) = freeDoF(freeDoF(subspace(mfes, i)))
+nDoF(mfes::MixedFESpace, i::Integer) = nDoF(subspace(mfes, i))
+
+Base.getindex(mfes::MixedFESpace, i::Integer) = subspace(mfes, i)
+Base.length(mfes::MixedFESpace) = length(subspaces(mfes))
+Base.start(::MixedFESpace) = 1
+Base.next(mfes::MixedFESpace, state::Integer) = (subspace(mfes, state), state+1)
+Base.done(mfes::MixedFESpace, state::Integer) = state > length(mfes)
+Base.eltype(::Type{MixedFESpace}) = FESpace
+Base.endof(mfes::MixedFESpace) = length(mfes)
 
 end # of module Spaces

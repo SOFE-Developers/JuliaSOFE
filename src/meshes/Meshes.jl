@@ -88,12 +88,12 @@ Topology.entities(m::Mesh, d::Integer) = entities(topology(m), d)
 """
 Topology.number(m::Mesh, d::Integer) = number(topology(m), d)
 
+Topology.boundary(m::Mesh, d::Integer) = boundary(topology(m), d)
+Topology.boundary(m::Mesh, f::Function) = boundary(topology(m), f)
+
 # Reference Maps
 include("refmaps.jl")
 
-function evaluate{T<:Float}(m::Mesh, f::Function, points::AbstractArray{T,2})
-    
-end
 
 function evalFunction{T<:Float}(m::Mesh, f::Function, points::AbstractArray{T,2})
     P = evalReferenceMap(m, points) # nExnPxnW

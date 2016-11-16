@@ -29,8 +29,7 @@ include("basic.jl")
 
   Return the finite element space of the operator `op`.
 """
-@inline space{T<:AbstractOperator}(op::T) = getfield(op, :fes)
-@inline getFESpace{T<:AbstractOperator}(op::T) = space(op)
+space{T<:AbstractOperator}(op::T) = getfield(op, :fes)
 
 """
 
@@ -38,8 +37,7 @@ include("basic.jl")
 
   Return the coefficient of the operator `op`.
 """
-@inline coeff{T<:AbstractOperator}(op::T) = getfield(op, :coeff)
-@inline getCoefficient{T<:AbstractOperator}(op::T) = coeff(op)
+coeff{T<:AbstractOperator}(op::T) = getfield(op, :coeff)
 
 # Includes
 include("bilinear.jl")
