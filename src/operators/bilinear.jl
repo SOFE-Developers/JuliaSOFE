@@ -75,14 +75,14 @@ function evaluate{C<:ConstantCoefficient}(op::Operator{C,id,id}, d::Integer)
     points = qpoints(op.quadrule, d)
     c = value(eltype(points), coeff(op))
     basis = evalBasis(element(space(op)), points, 0)
-    return c, basis, basis
+    return c, basis[:,:,1], basis[:,:,1]
 end
 
 function evaluate{C<:FunctionCoefficient}(op::Operator{C,id,id}, d::Integer)
     points = qpoints(op.quadrule, d)
     c = evaluate(coeff(op), points, mesh(space(op)))
     basis = evalBasis(element(space(op)), points, 0)
-    return c, basis, basis
+    return c, basis[:,:,1], basis[:,:,1]
 end
 
 #-----------------#

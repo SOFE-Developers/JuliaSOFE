@@ -19,39 +19,43 @@ typealias fdat FunctionCoefficient
 
 # scalar const * scalar oper (local) * scalar oper (local)
 function fill_entries!{T<:Real,Tc<:data,Tu<:op,Tv<:op}(::Operator{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3},
-                                                       C::T,
-                                                       U::AbstractArray{T,2},
-                                                       V::AbstractArray{T,2},
-                                                       w::AbstractArray{T,1},
-                                                       D::AbstractArray{T,2})
+                                                       E::AbstractArray{T,3}, # nE x nBi x nBj
+                                                       C::T,                  # 1
+                                                       U::AbstractArray{T,2}, # nBj x nP
+                                                       V::AbstractArray{T,2}, # nBi x nP
+                                                       w::AbstractArray{T,1}, # nP
+                                                       D::AbstractArray{T,2}) # nE x nP
     nE, nBi, nBj = size(E)
+    nBj, nP = size(U)
+    nBi, nP = size(V)
     nP = size(w, 1)
-    for jb = 1:nBj
-        for ib = 1:nBi
-            for ie = 1:nE
-                for ip = 1:nP
+
+    for ip = 1:nP
+        for jb = 1:nBj
+            for ib = 1:nBi
+                for ie = 1:nE
                     E[ie,ib,jb] += C * U[jb,ip] * V[ib,ip] * w[ip] * D[ie,ip]
                 end
             end
         end
     end
+
     return nothing
 end
 
 # scalar const * vector oper (global) * vector oper (global)
 function fill_entries!{T<:Real,Tc<:data,Tu<:Op,Tv<:Op}(::Operator{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3},
-                                                       C::T,
-                                                       U::AbstractArray{T,4},
-                                                       V::AbstractArray{T,4},
-                                                       w::AbstractArray{T,1},
-                                                       D::AbstractArray{T,2})
+                                                       E::AbstractArray{T,3}, # nE x nBi x nBj
+                                                       C::T,                  # 1
+                                                       U::AbstractArray{T,4}, # nE x nBj x nP x nD
+                                                       V::AbstractArray{T,4}, # nE x nBi x nP x nD
+                                                       w::AbstractArray{T,1}, # nP
+                                                       D::AbstractArray{T,2}) # nE x nP
     nE, nBi, nBj = size(E)
-    nE, nB, nP, nW = size(U)
+    nE, nB, nP, nD = size(U)
 
-    for ip = 1:nP
-        for id = 1:nW
+    for id = 1:nD
+        for ip = 1:nP
             for jb = 1:nBj
                 for ib = 1:nBi
                     for ie = 1:nE
@@ -66,12 +70,12 @@ end
 
 # vector const * vector oper (global) * scalar oper (local)
 function fill_entries!{T<:Real,Tc<:Data,Tu<:Op,Tv<:op}(::Operator{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3},
-                                                       C::AbstractArray{T,1},
-                                                       U::AbstractArray{T,4},
-                                                       V::AbstractArray{T,2},
-                                                       w::AbstractArray{T,1},
-                                                       D::AbstractArray{T,2})
+                                                       E::AbstractArray{T,3}, # nE x nBi x nBj
+                                                       C::AbstractArray{T,1}, # nD
+                                                       U::AbstractArray{T,4}, # nE x nBj x nP x nD
+                                                       V::AbstractArray{T,2}, # nBi x nP
+                                                       w::AbstractArray{T,1}, # nP
+                                                       D::AbstractArray{T,2}) # nE x nP
     nE, nBi, nBj = size(E)
     nE, nB, nP, nW = size(U)
     for jb = 1:nBj
@@ -90,12 +94,12 @@ end
 
 # matrix const * vector oper (global) * vector oper (global)
 function fill_entries!{T<:Real,Tc<:DATA,Tu<:Op,Tv<:Op}(::Operator{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3},
-                                                       C::AbstractArray{T,2},
-                                                       U::AbstractArray{T,4},
-                                                       V::AbstractArray{T,4},
-                                                       w::AbstractArray{T,1},
-                                                       D::AbstractArray{T,2})
+                                                       E::AbstractArray{T,3}, # nE x nBi x nBj
+                                                       C::AbstractArray{T,2}, # nD x nD
+                                                       U::AbstractArray{T,4}, # nE x nBj x nP x nD
+                                                       V::AbstractArray{T,4}, # nE x nBi x nP x nD
+                                                       w::AbstractArray{T,1}, # nP
+                                                       D::AbstractArray{T,2}) # nE x nP
     nE, nBi, nBj = size(E)
     nE, nB, nP, nW = size(U)
     for jb = 1:nBj

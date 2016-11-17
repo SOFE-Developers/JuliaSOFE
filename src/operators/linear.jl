@@ -68,13 +68,13 @@ function evaluate{C<:ConstantCoefficient}(fnc::Functional{C,id}, d::Integer)
     points = qpoints(fnc.quadrule, d)
     c = value(eltype(points), coeff(fnc))
     basis = evalBasis(element(space(fnc)), points, 0)
-    return c, basis
+    return c, basis[:,:,1]
 end
 
 function evaluate{C<:FunctionCoefficient}(fnc::Functional{C,id}, d::Integer)
     points = qpoints(fnc.quadrule, d)
     c = evaluate(coeff(fnc), points, mesh(space(fnc)))
     basis = evalBasis(element(space(fnc)), points, 0)
-    return ndarray(c), basis
+    return ndarray(c), basis[:,:,1]
 end
 
