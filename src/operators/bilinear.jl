@@ -102,16 +102,17 @@ function evaluate{C<:ConstantCoefficient}(op::Operator{C,Grad,Grad}, d::Integer)
     invdphi = evalJacobianInverse(mesh(space(op)), points)
 
     nE, nP, nW, nD = size(invdphi)
-    nB, nP, nW = size(dbasis)
+    nB, nP, nC, nD = size(dbasis)
+    @assert nC == 1
+    
+    grad = zeros(eltype(points), nE, nB, nP, nD)
 
-    grad = zeros(eltype(points), nE, nB, nP, nW)
-
-    for jd = 1:nW
-        for id = 1:nW
+    for id = 1:nD
+        for iw = 1:nW
             for ip = 1:nP
                 for ib = 1:nB
                     for ie = 1:nE
-                        grad[ie,ib,ip,id] += invdphi[ie,ip,jd,id] * dbasis[ib,ip,id]
+                        grad[ie,ib,ip,id] += invdphi[ie,ip,iw,id] * dbasis[ib,ip,1,id]
                     end
                 end
             end
@@ -130,16 +131,17 @@ function evaluate{C<:FunctionCoefficient}(op::Operator{C,Grad,Grad}, d::Integer)
     invdphi = evalJacobianInverse(mesh(space(op)), points)
 
     nE, nP, nW, nD = size(invdphi)
-    nB, nP, nW = size(dbasis)
+    nB, nP, nC, nD = size(dbasis)
+    @assert nC == 1
 
-    grad = zeros(eltype(points), nE, nB, nP, nW)
+    grad = zeros(eltype(points), nE, nB, nP, nD)
 
-    for jd = 1:nW
-        for id = 1:nW
+    for id = 1:nD
+        for iw = 1:nW
             for ip = 1:nP
                 for ib = 1:nB
                     for ie = 1:nE
-                        grad[ie,ib,ip,id] += invdphi[ie,ip,jd,id] * dbasis[ib,ip,id]
+                        grad[ie,ib,ip,id] += invdphi[ie,ip,iw,id] * dbasis[ib,ip,1,id]
                     end
                 end
             end
