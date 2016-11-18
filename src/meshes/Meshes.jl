@@ -13,6 +13,7 @@ export evaluate
 
 include("topology.jl")
 using .Topology
+export connectivity
 
 #--------------------#
 # Abstract Mesh Type #

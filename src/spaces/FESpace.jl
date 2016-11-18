@@ -116,7 +116,7 @@ function dofMap{T<:Integer}(fes::FESpace;
                 mask::AbstractArray{T,1} = 1:number(mesh(fes), d))
     dofTuple = Elements.dofTuple(element(fes))
     dofPerDim = nDoF(element(fes), d)
-    nEntities = [getNumber(fes.mesh.topology, dd) for dd = 0:d]
+    nEntities = [number(fes.mesh.topology, dd) for dd = 0:d]
     dofsNeeded = [nEntities[dd+1] * dofTuple[dd+1] for dd = 0:d]
     ndofs = [0, cumsum(dofsNeeded)...]
     dofs = [reshape(ndofs[i]+1:ndofs[i+1], dofTuple[i], nEntities[i]) for i = 1:d+1]
@@ -125,7 +125,7 @@ function dofMap{T<:Integer}(fes::FESpace;
 
     # first, iterate over subdims
     for dd = 0:d-1
-        d_dd = getConnectivity(topology(mesh(fes)), d, dd)
+        d_dd = connectivity(topology(mesh(fes)), d, dd)
         for i = 1:size(d_dd, 1)
             for j = 1:size(d_dd, 2)
                 r = (j-1)*dofTuple[dd+1]+1 : j*dofTuple[dd+1]
