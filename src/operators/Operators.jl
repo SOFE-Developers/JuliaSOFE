@@ -8,6 +8,8 @@ using ..Spaces
 using ..Quadrature
 using ..Helpers
 
+import ..Meshes: evaluate
+
 export AbstractOperator
 export space, coeff, assemble, assemble!
 

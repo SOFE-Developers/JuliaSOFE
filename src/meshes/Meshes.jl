@@ -2,16 +2,17 @@ __precompile__()
 
 module Meshes
 
-export AbstractMesh, Mesh
-export dimension, topology, nodes, entities, number
-
 using ..Elements
+
 import ..Elements: dimension
+
+export AbstractMesh, Mesh
+export dimension, topology, nodes, entities, number, boundary
+export evaluate
+
 
 include("topology.jl")
 using .Topology
-export boundary
-export getNodes, getConnectivity, getEntities, getNumber
 
 #--------------------#
 # Abstract Mesh Type #
@@ -56,6 +57,14 @@ end
 
 """
 
+    element(m::Mesh)
+
+  Return the shape element of the mesh.
+"""
+@inline element(m::Mesh) = getfield(m, :element)
+
+"""
+
     topology(m::Mesh)
 
   Return the topology of the mesh.
@@ -92,8 +101,11 @@ Topology.boundary(m::Mesh, d::Integer) = boundary(topology(m), d)
 Topology.boundary(m::Mesh, f::Function) = boundary(topology(m), f)
 
 # Reference Maps
+# ---------------
 include("refmaps.jl")
 
+# Data Evaluation
+# ----------------
 typealias Constant{T<:Real} Union{T, AbstractVector{T}, AbstractMatrix{T}}
 
 function evaluate{T<:Constant,S<:Float}(c::T, points::AbstractArray{S,2}, m::Mesh)
@@ -117,15 +129,19 @@ function evaluate{T<:Constant,S<:Float}(c::T, points::AbstractArray{S,2}, m::Mes
     return R
 end
 
-function evalFunction{T<:Float}(m::Mesh, f::Function, points::AbstractArray{T,2})
-    P = evalReferenceMap(m, points) # nExnPxnW
-    (nE, nP, nW) = size(P)
-    P = reshape(P, nE*nP, nW) # (nE*nP)xnW
-    R = f(P) # (nE*nP)x[...]
-    R = reshape(R, nE, nP, size(R,2))
+function evaluate{T<:Float}(f::Function, points::AbstractArray{T,2}, m::Mesh)
+    P = evalReferenceMaps(m, points)
+    nE, nP, nW = size(P)
+
+    R = f(reshape(P, (nE*nP,nW)))
+    nF = size(R, (2,(3:ndims(R))...)...)
+    R = (nF == 1) ? reshape(R, nE, nP) : reshape(R, nE, nP, nF...)
+
+    return ndarray(R)
 end
 
 # Mesh Generation
+# ----------------
 include("generation.jl")
 
 end # of module Meshes
