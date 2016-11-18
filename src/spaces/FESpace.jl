@@ -3,6 +3,7 @@ __precompile__()
 module Spaces
 
 import ..Elements: nDoF
+import ..Meshes: evaluate
 
 using ..Elements
 using ..Meshes
@@ -11,6 +12,8 @@ export AbstractFESpace, FESpace, MixedFESpace
 export mesh, element, domain, domain!, shift, shift!
 export dofMap, nDoF, dofIndices, dofMask, extractDoFs, fixedDoF, freeDoF
 export interpolate, evaluate
+
+typealias Float AbstractFloat
 
 abstract AbstractFESpace
 
@@ -215,14 +218,16 @@ interpolate(fes::FESpace, f::Function) = interpolate(fes.mesh, fes.element, f)
   space's basis functions or their derivatives in the 
   given local `points` w.r.t. the given `dof` values.
 """
-function evaluate{T<:AbstractFloat}(fes::FESpace, dof::AbstractVector{T},
-                                    points::AbstractArray{T,2}, deriv::Integer=0)
+function evaluate{T<:Float,S<:Float}(fes::FESpace, dof::AbstractVector{S},
+                                     points::AbstractArray{T,2}, deriv::Integer=0)
     nP, dimP = size(points)
     dofmap = dofMap(fes, d=dimP)
     nB, nE = size(dofmap)
     basis = evalBasis(element(fes), points, deriv)
     nB, nP, nC, nD = size(basis, 1:4...)
 
+    dof = convert(Vector{promote_type(T, S)}, dof)
+    
     if deriv == 0
         @assert nD == 1
         U = zeros(T,nE,nP,nC)

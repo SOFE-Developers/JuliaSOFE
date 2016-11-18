@@ -6,7 +6,7 @@ using ..Elements
 using ..Meshes
 using ..Spaces
 
-export show
+export plot
 
 const pyvisofe = PyNULL()
 
@@ -40,7 +40,7 @@ function visgrid(m::Mesh, refgrid::Mesh)
     return Mesh(visnodes, viscells)
 end
 
-function show(m::Mesh)
+function plot(m::Mesh)
     D = Meshes.dimension(m)
     
     if D == 1
@@ -64,7 +64,7 @@ function show(m::Mesh)
     end
 end
 
-function show(el::Element, i::Integer; resolution::Integer=100,
+function plot(el::Element, i::Integer; resolution::Integer=100,
               size::Integer=2, alpha::AbstractFloat=1.)
     D = Elements.dimension(el)
     vismesh = visgrid(el, resolution)
@@ -88,7 +88,7 @@ function show(el::Element, i::Integer; resolution::Integer=100,
     end
 end
 
-function show{T<:AbstractFloat}(fes::FESpace, uh::AbstractVector{T};
+function plot{T<:AbstractFloat}(fes::FESpace, uh::AbstractVector{T};
                                 resolution::Integer=3)
     refmesh = visgrid(element(fes), resolution)
     vismesh = visgrid(mesh(fes), refmesh)
@@ -96,6 +96,7 @@ function show{T<:AbstractFloat}(fes::FESpace, uh::AbstractVector{T};
     values = evaluate(fes, uh, nodes(refmesh), 0)
     nE, nP, nC = size(values)
     @assert nC == 1
+    values = permutedims(values, [2,1,3])
 
     D = dimension(vismesh)
     coords = nodes(vismesh)
