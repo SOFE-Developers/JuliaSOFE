@@ -20,10 +20,10 @@ visgrid{T<:PElement}(el::Element{T}, resolution::Integer) =
 visgrid{T<:QElement}(el::Element{T}, resolution::Integer) =
     UnitOrthotope(Elements.dimension(el), resolution)
 
-function visgrid(m::Mesh, resolution::Integer)
-    refmesh = visgrid(m.element, resolution)
-    refnodes = nodes(refmesh)
-    refcells = entities(refmesh, dimension(refmesh))
+visgrid(m::Mesh, resolution::Integer) = visgrid(m, visgrid(m.element, resolution))
+function visgrid(m::Mesh, refgrid::Mesh)
+    refnodes = nodes(refgrid)
+    refcells = entities(refgrid, dimension(refgrid))
     nE_ref, nV = size(refcells)
     nN_ref, nW = size(refnodes)
 
@@ -90,8 +90,33 @@ end
 
 function show{T<:AbstractFloat}(fes::FESpace, uh::AbstractVector{T};
                                 resolution::Integer=3)
-    vismesh_loc = visgrid(element(fes), resolution)
-    
+    refmesh = visgrid(element(fes), resolution)
+    vismesh = visgrid(mesh(fes), refmesh)
+
+    values = evaluate(fes, uh, nodes(refmesh), 0)
+    nE, nP, nC = size(values)
+    @assert nC == 1
+
+    D = dimension(vismesh)
+    coords = nodes(vismesh)
+    if D == 1
+        x = coords[:,1]; y = values[:]
+        
+        pyvisofe[:plot](x, y)
+    elseif D == 2
+        x = coords[:,1]; y = coords[:,2]; z = values[:]
+        faces = entities(vismesh, 2) - 1
+        edges = entities(vismesh, 1)[boundary(vismesh,1),:] - 1
+
+        pyvisofe[:trisurface](x, y, z, faces,
+                              edges=edges, edge_color="black")
+    elseif D == 3
+        x = coords[:,1]; y = coords[:,2]; z = coords[:,3]
+        c = values[:]
+
+        pyvisofe[:scatter3d](x, y, z,
+                             c=c, size=2., alpha=0.5)
+    end
 end
 
 end # of module Visualization
