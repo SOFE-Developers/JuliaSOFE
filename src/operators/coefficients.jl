@@ -71,24 +71,6 @@ value{T<:Real,S<:AbstractVector}(::Type{T}, c::ConstantCoefficient{S}) =
 value{T<:Real,S<:AbstractMatrix}(::Type{T}, c::ConstantCoefficient{S}) =
     convert(Matrix{promote_type(T,eltype(S))}, value(c))
 
-function (c::ConstantCoefficient)(x)
-    return value(eltype(x), c)
-end
-
-function evaluate{T<:Float,C<:ConstantCoefficient}(c::C, points::AbstractArray{T,2}, m::Mesh)
-    P = evalReferenceMaps(m, points)
-    nE, nP, nW = size(P)
-
-    val = value(T, c)
-    R = zeros(T, nE, nP, size(val)...)
-    for ip = 1:nP
-        for ie = 1:nE
-            R[ie,ip,:] = val
-        end
-    end
-    return R
-end
-
 function evaluate{T<:Float,C<:ConstantCoefficient}(c::C, points::AbstractArray{T,2})
     nP, nW = size(points)
     val = value(T, c)
@@ -97,6 +79,10 @@ function evaluate{T<:Float,C<:ConstantCoefficient}(c::C, points::AbstractArray{T
         R[ip,:] = val
     end
     return R
+end
+
+function evaluate{T<:Float,C<:ConstantCoefficient}(c::C, points::AbstractArray{T,2}, m::Mesh)
+    return evaluate(value(T, c), points, m)
 end
 
 #--------------------------#
@@ -133,14 +119,6 @@ function evaluate{F<:FunctionCoefficient,T<:Float}(f::F, points::AbstractArray{T
 end
 
 function evaluate{F<:FunctionCoefficient,T<:Float}(f::F, points::AbstractArray{T,2}, m::Mesh)
-    P = evalReferenceMaps(m, points)
-    nE, nP, nW = size(P)
-
-    R = f(reshape(P, (nE*nP,nW)))
-    nF = size(R, (2,(3:ndims(R))...)...)
-    R = (nF == 1) ? reshape(R, nE, nP) : reshape(R, nE, nP, nF...)
-
-    #return R
-    return ndarray(R)
+    return evaluate(func(f), points, m)
 end
 

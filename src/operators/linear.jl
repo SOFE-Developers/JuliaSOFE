@@ -2,7 +2,6 @@
 export LinearOperator, Functional
 export fid
 export vector, vector!, evaluate
-export getVector, setVector!
 
 abstract LinearOperator <: AbstractOperator
 
@@ -53,9 +52,7 @@ end
   Return the discretized version of the linear operator `l`.
 """
 @inline vector{T<:LinearOperator}(l::T) = getfield(l, :vector)
-@inline getVector{T<:LinearOperator}(l::T) = vector(op)
 @inline vector!{T<:LinearOperator}(l::T, L::Vector) = setfield!(l, :vector, L)
-setVector!{T<:LinearOperator}(l::T, L::Vector) = vector!(l, L)
 
 #------------#
 # Type fid   #
@@ -64,17 +61,12 @@ type fid <: LinearOperator
 end
 fid(fes::FESpace, coeff) = Functional(id, fes, coeff)
 
-function evaluate{C<:ConstantCoefficient}(fnc::Functional{C,id}, d::Integer)
-    points = qpoints(fnc.quadrule, d)
-    c = value(eltype(points), coeff(fnc))
-    basis = evalBasis(element(space(fnc)), points, 0)
-    return c, basis[:,:,1]
-end
-
-function evaluate{C<:FunctionCoefficient}(fnc::Functional{C,id}, d::Integer)
+function evaluate{C<:AbstractCoefficient}(fnc::Functional{C,id}, d::Integer)
     points = qpoints(fnc.quadrule, d)
     c = evaluate(coeff(fnc), points, mesh(space(fnc)))
     basis = evalBasis(element(space(fnc)), points, 0)
-    return ndarray(c), basis[:,:,1]
+    @assert ndims(basis) == 3 && size(basis, 3) == 1
+    basis = view(basis, :, :, 1)
+    return c, basis
 end
 
