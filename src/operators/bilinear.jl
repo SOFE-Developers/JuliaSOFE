@@ -25,7 +25,8 @@ end
 # Outer Constructors
 # -------------------
 function Operator{U<:AbsOp,V<:AbsOp,C<:AbsCoeff}(::Type{U}, ::Type{V}, fes::FESpace, coeff::C)
-    if issubtype(Elements.type_(fes.element), PElement)
+    #if issubtype(Elements.type_(fes.element), PElement)
+    if issimplical(element(fes))
         qrule = QuadRuleSimp2()
     else
         error("Currently only simplical elements supported...")

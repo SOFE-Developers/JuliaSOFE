@@ -7,6 +7,8 @@ import ..Helpers: dimension
 export AbstractElement, PElement, QElement, Element
 export LagrangeP1, LagrangeQ1
 export dimension, order, nBasis, nVertices, dofTuple, nDoF, evalBasis, isnodal
+export issimplical, isorthotopic
+export ndims
 
 abstract AbstractElement
 abstract PElement <: AbstractElement
@@ -19,11 +21,23 @@ typealias Float AbstractFloat
 #--------------#
 # Type Element #
 #--------------#
-type Element{T<:ElementTypes} <: AbstractElement
+# type Element{T<:ElementTypes} <: AbstractElement
+#     dimension :: Int
+# end
+type Element{T<:ElementTypes,N} <: AbstractElement
     dimension :: Int
-    type_ :: Type
 end
-Element{T<:ElementTypes}(::Type{T}, dim::Integer) = Element{T}(dim, T)
+# type FiniteElement{T<:ElementTypes,N} <: AbstractElement
+#     dimension :: Int
+# end
+
+# typealias Element{T} FiniteElement{T,1}
+# typealias VectorElement{T,N} FiniteElement{T,N}
+
+# Outer Constructors
+# -------------------
+Element{T<:ElementTypes}(::Type{T}, dim::Integer) = Element{T,1}(dim)
+VectorElement{T<:ElementTypes}(::Type{T}, dim::Integer, cmp::Integer) = Element{T,Int(cmp)}(dim)
 
 # Associated methods
 # -------------------
@@ -35,13 +49,13 @@ Element{T<:ElementTypes}(::Type{T}, dim::Integer) = Element{T}(dim, T)
 """
 @inline dimension(el::Element) = el.dimension
 
-"""
+@inline Base.ndims{T,N}(::Element{T,N}) = isa(N, Integer) ? N : throw(TypeError)
 
-    type_(el::Element)
+@inline issimplical{T<:PElement}(::Element{T}) = true
+@inline issimplical{T<:QElement}(::Element{T}) = false
+@inline isorthotopic{T<:PElement}(::Element{T}) = false
+@inline isorthotopic{T<:QElement}(::Element{T}) = true
 
-  Return the concrete child type of the element.
-"""
-@inline type_(el::Element) = el.type_
 
 """
 
@@ -101,7 +115,7 @@ function evalBasis{T<:AbstractFloat}(el::Element,
                                      deriv::Integer=0)
     nP, nW = size(points)
     nB = nBasis(el, nW)
-    nC = 1
+    nC = ndims(el)
 
     if deriv == 0
         B = zeros(T, nB, nP, nC)
@@ -117,139 +131,9 @@ function evalBasis{T<:AbstractFloat}(el::Element,
     end
 end
 
-#-----------------#
-# Type LagrangeP1 #
-#-----------------#
-type LagrangeP1 <: PElement
-end
-LagrangeP1(dim::Integer) = Element(LagrangeP1, dim)
+include("lagrange.jl")
 
-isnodal(::Element{LagrangeP1}) = true
-order(::Element{LagrangeP1}) = 1
-nBasis(el::Element{LagrangeP1}) = tuple(2:(dimension(el)+1)...)
-dofTuple(el::Element{LagrangeP1}) = (1, 0, 0, 0)[1:dimension(el)+1]
-
-# Associated Methods
-# -------------------
-function evalD0Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,3})
-    for ip = 1:size(points, 1)
-        out[1,ip,1] = one(T)
-        for id = 1:size(points, 2)
-            out[1,ip,1] -= points[ip,id]
-            out[id+1,ip,1] = points[ip,id]
-        end
-    end
-    return out
-end
-
-function evalD1Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,4})
-    out[1,:,1,:] = -one(T)
-    for k = 1:size(out, 1)-1
-        out[k+1,:,1,k] = one(T)
-    end
-    return out
-end
-
-function evalD2Basis!{T<:Float}(el::Element{LagrangeP1}, points::AbstractArray{T,2}, out::Array{T,5})
-    out[:] = zero(T)
-    return out
-end
-
-#-----------------#
-# Type LagrangeQ1 #
-#-----------------#
-type LagrangeQ1 <: QElement
-end
-LagrangeQ1(dim::Integer) = Element(LagrangeQ1, dim)
-
-isnodal(::Element{LagrangeQ1}) = true
-order(::Element{LagrangeQ1}) = 1
-nBasis(el::Element{LagrangeQ1}) = tuple(2.^(1:dimension(el))...)
-dofTuple(el::Element{LagrangeQ1}) = (1, 0, 0, 0)[1:dimension(el)+1]
-
-# Associated Methods
-# -------------------
-function evalD0Basis!{T<:Float}(el::Element{LagrangeQ1}, points::AbstractArray{T,2}, out::Array{T,3})
-    nD = size(points, 2)
-    if nD == 1
-        out[1,:,1] = 1-points[:,1];
-        out[2,:,1] = points[:,1];
-    elseif nD == 2
-        out[1,:,1] = (1-points[:,1]).*(1-points[:,2]);
-        out[2,:,1] = points[:,1].*(1-points[:,2]);
-        out[3,:,1] = (1-points[:,1]).*points[:,2];
-        out[4,:,1] = points[:,1].*points[:,2];
-    elseif nD == 3
-        out[1,:,1] = (1-points[:,1]).*(1-points[:,2]).*(1-points[:,3]);
-        out[2,:,1] = points[:,1].*(1-points[:,2]).*(1-points[:,3]);
-        out[3,:,1] = (1-points[:,1]).*points[:,2].*(1-points[:,3]);
-        out[4,:,1] = points[:,1].*points[:,2].*(1-points[:,3]);
-        out[5,:,1] = (1-points[:,1]).*(1-points[:,2]).*points[:,3];
-        out[6,:,1] = points[:,1].*(1-points[:,2]).*points[:,3];
-        out[7,:,1] = (1-points[:,1]).*points[:,2].*points[:,3];
-        out[8,:,1] = points[:,1].*points[:,2].*points[:,3];
-    else
-        error("Invalid point dimension ", nD)
-    end
-    return out
-end
-
-function evalD1Basis!{T<:Float}(el::Element{LagrangeQ1}, points::AbstractArray{T,2}, out::Array{T,4})
-    nD = size(points, 2)
-    if nD == 1
-        out[1,:,1,1] = -1;
-        out[2,:,1,1] = 1;
-    elseif nD == 2
-        out[1,:,1,1] = -(1-points[:,2]);
-        out[1,:,1,2] = -(1-points[:,1]);
-        out[2,:,1,1] = 1-points[:,2];
-        out[2,:,1,2] = -points[:,1];
-        out[3,:,1,1] = -points[:,2];
-        out[3,:,1,2] = 1-points[:,1];
-        out[4,:,1,1] = points[:,2];
-        out[4,:,1,2] = points[:,1];
-    elseif nD == 3
-        out[1,:,1,1] = -(1-points[:,2]).*(1-points[:,3]);
-        out[1,:,1,2] = -(1-points[:,1]).*(1-points[:,3]);
-        out[1,:,1,3] = -(1-points[:,1]).*(1-points[:,2]);
-
-        out[2,:,1,1] = (1-points[:,2]).*(1-points[:,3]);
-        out[2,:,1,2] = -points[:,1].*(1-points[:,3]);
-        out[2,:,1,3] = -points[:,1].*(1-points[:,2]);
-
-        out[3,:,1,1] = -points[:,2].*(1-points[:,3]);
-        out[3,:,1,2] = (1-points[:,1]).*(1-points[:,3]);
-        out[3,:,1,3] = -(1-points[:,1]).*points[:,2];
-
-        out[4,:,1,1] = points[:,2].*(1-points[:,3]);
-        out[4,:,1,2] = points[:,1].*(1-points[:,3]);
-        out[4,:,1,3] = -points[:,1].*points[:,2];
-
-        out[5,:,1,1] = -(1-points[:,2]).*points[:,3];
-        out[5,:,1,2] = -(1-points[:,1]).*points[:,3];
-        out[5,:,1,3] = (1-points[:,1]).*(1-points[:,2]);
-        
-        out[6,:,1,1] = (1-points[:,2]).*points[:,3];
-        out[6,:,1,2] = -points[:,1].*points[:,3];
-        out[6,:,1,3] = points[:,1].*(1-points[:,2]);
-        
-        out[7,:,1,1] = -points[:,2].*points[:,3];
-        out[7,:,1,2] = (1-points[:,1]).*points[:,3];
-        out[7,:,1,3] = (1-points[:,1]).*points[:,2];
-        
-        out[8,:,1,1] = points[:,2].*points[:,3];
-        out[8,:,1,2] = points[:,1].*points[:,3];
-        out[8,:,1,3] = points[:,1].*points[:,2];
-    else
-        error("Invalid point dimension ", nD)
-    end
-    return out
-end
-
-function evalD2Basis!{T<:Float}(el::Element{LagrangeQ1}, points::AbstractArray{T,2}, out::Array{T,5})
-  out[:] = zero(T)
-  return out
-end
+include("mixed.jl")
 
 end # of module Elements
 
