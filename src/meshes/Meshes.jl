@@ -141,8 +141,4 @@ function evaluate{T<:Float}(f::Function, points::AbstractArray{T,2}, m::Mesh)
     return ndarray(R)
 end
 
-# Mesh Generation
-# ----------------
-include("generation.jl")
-
 end # of module Meshes

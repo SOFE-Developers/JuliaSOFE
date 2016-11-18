@@ -32,6 +32,10 @@ include(joinpath(dirname(@__FILE__), "operators", "Operators.jl"))
 include(joinpath(dirname(@__FILE__), "problems", "Problems.jl"))
 @reexport using .Problems
 
+# Preprocessing
+include(joinpath(dirname(@__FILE__), "preprocessing", "MeshGeneration.jl"))
+@reexport using .MeshGeneration
+
 # Postprocessing
 include(joinpath(dirname(@__FILE__), "postprocessing", "Visualization.jl"))
 @reexport using .Visualization
