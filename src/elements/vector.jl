@@ -1,4 +1,5 @@
-
+export VectorElement
+export subelem, components
 
 #--------------------#
 # Type VectorElement #
