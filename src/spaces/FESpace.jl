@@ -81,7 +81,7 @@ shift!(fes::FESpace, f::Function) = setfield!(fes, :shift, f)
 function fixedDoF(fes::FESpace)
     dim = dimension(mesh(fes)) - 1
     bmask = boundary(mesh(fes), domain(fes))
-    return extractDoF(fes, d=dim, mask=bmask)
+    return extractDoF(fes, dim, bmask)
 end
 
 """
@@ -111,33 +111,56 @@ freeDoF(fes::FESpace) = !fixedDoF(fes)
   * `mask::Vector{T<:Integer}`: A mask marking specific entities
                     for which to compute the dof map
 """
-function dofMap{T<:Integer}(fes::FESpace;
-                d::Integer = dimension(mesh(fes)),
-                mask::AbstractArray{T,1} = 1:number(mesh(fes), d))
-    dofTuple = Elements.dofTuple(element(fes))
-    dofPerDim = nDoF(element(fes), d)
-    nEntities = [number(fes.mesh.topology, dd) for dd = 0:d]
-    dofsNeeded = [nEntities[dd+1] * dofTuple[dd+1] for dd = 0:d]
-    ndofs = [0, cumsum(dofsNeeded)...]
-    dofs = [reshape(ndofs[i]+1:ndofs[i+1], dofTuple[i], nEntities[i]) for i = 1:d+1]
+function dofMap{T<:Integer}(fes::FESpace, d::Integer, mask::AbstractArray{T,1})
+    dofs = generateDoFs(element(fes), mesh(fes), d)
+    ndof = nDoF(element(fes))
 
-    M = [zeros(Int, dofPerDim[i], nEntities[d+1]) for i = 1:d+1]
+    M = zeros(T, sum(ndof), number(mesh(fes), d))
 
-    # first, iterate over subdims
+    rb = 0
     for dd = 0:d-1
         d_dd = connectivity(topology(mesh(fes)), d, dd)
-        for i = 1:size(d_dd, 1)
-            for j = 1:size(d_dd, 2)
-                r = (j-1)*dofTuple[dd+1]+1 : j*dofTuple[dd+1]
-                M[dd+1][r,i] = dofs[dd+1][:,d_dd[i,j]]
-            end
+        ra = rb + 1; rb += ndof[dd+1]
+        fill_dofMap!(view(M, ra:rb, :), dofs[dd+1], d_dd)
+    end
+
+    for j = 1:size(dofs[d+1], 2)
+        for i = 1:size(dofs[d+1], 1)
+            M[rb+i,j] = dofs[d+1][i,j]
         end
     end
 
-    # set dofs of query dim
-    M[d+1] = dofs[d+1]
+    return M[:,mask]
+end
+dofMap(fes::FESpace, d::Integer) = dofMap(fes, d, 1:number(mesh(fes), d))
+dofMap(fes::FESpace) = dofMap(fes, dimension(element(fes)))
 
-    return vcat(M...)[:,mask]
+function fill_dofMap!{T<:Integer}(M::AbstractArray{T,2}, dofs::AbstractArray{T,2}, inc::AbstractArray{T,2})
+    ptr = 1
+    for i = 1:size(inc, 1)
+        for j = 1:size(inc, 2)
+            for k = 1:size(dofs, 1)
+                M[ptr,i] = dofs[k, inc[i,j]]
+                ptr += 1
+            end
+        end
+        ptr = 1
+    end
+    return nothing
+end
+
+function generateDoFs{T<:AbstractElement}(elem::T, mesh::Mesh, d::Integer)
+    doftuple = dofTuple(elem)
+    nentities = [number(mesh, dd) for dd = 0:d]
+    ndofs = map(*, doftuple, nentities)
+    dofrange = [1, 1 + cumsum(ndofs)...]
+    dofs = [reshape(dofrange[i]:dofrange[i+1]-1, doftuple[i], nentities[i])
+            for i = 1:d+1]
+
+    return dofs
+end
+
+function assembleDoFs{T<:Integer}(dofs::AbstractArray{T,1}, d::Integer)
 end
 
 """
@@ -148,7 +171,7 @@ end
   finite element space `fes`.
 """
 function nDoF(fes::FESpace)
-    return maxabs(dofMap(fes, d=dimension(mesh(fes))))
+    return maxabs(dofMap(fes, dimension(mesh(fes))))
 end
 
 """

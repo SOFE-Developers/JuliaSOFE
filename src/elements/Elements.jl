@@ -7,10 +7,10 @@ import ..Helpers: dimension
 export AbstractElement, PElement, QElement, Element
 export LagrangeP1, LagrangeQ1
 export dimension, order, nBasis, nVertices, dofTuple, nDoF, evalBasis, isnodal
-export issimplical, isorthotopic
-export ndims
+export issimp, isorth
 
-abstract AbstractElement
+abstract AbstractElement{T}
+
 abstract PElement <: AbstractElement
 abstract QElement <: AbstractElement
 
@@ -21,23 +21,13 @@ typealias Float AbstractFloat
 #--------------#
 # Type Element #
 #--------------#
-# type Element{T<:ElementTypes} <: AbstractElement
-#     dimension :: Int
-# end
-type Element{T<:ElementTypes,N} <: AbstractElement
+type Element{T<:ElementTypes} <: AbstractElement{T}
     dimension :: Int
 end
-# type FiniteElement{T<:ElementTypes,N} <: AbstractElement
-#     dimension :: Int
-# end
-
-# typealias Element{T} FiniteElement{T,1}
-# typealias VectorElement{T,N} FiniteElement{T,N}
 
 # Outer Constructors
 # -------------------
-Element{T<:ElementTypes}(::Type{T}, dim::Integer) = Element{T,1}(dim)
-VectorElement{T<:ElementTypes}(::Type{T}, dim::Integer, cmp::Integer) = Element{T,Int(cmp)}(dim)
+Element{T<:ElementTypes}(::Type{T}, dim::Integer) = Element{T}(dim)
 
 # Associated methods
 # -------------------
@@ -47,23 +37,20 @@ VectorElement{T<:ElementTypes}(::Type{T}, dim::Integer, cmp::Integer) = Element{
 
   The topological dimension of the element.
 """
-@inline dimension(el::Element) = el.dimension
+dimension(el::Element) = getfield(el, :dimension)
 
-@inline Base.ndims{T,N}(::Element{T,N}) = isa(N, Integer) ? N : throw(TypeError)
-
-@inline issimplical{T<:PElement}(::Element{T}) = true
-@inline issimplical{T<:QElement}(::Element{T}) = false
-@inline isorthotopic{T<:PElement}(::Element{T}) = false
-@inline isorthotopic{T<:QElement}(::Element{T}) = true
-
+issimp{T<:PElement}(::AbstractElement{T}) = true
+issimp{T<:QElement}(::AbstractElement{T}) = false
+isorth{T<:PElement}(::AbstractElement{T}) = false
+isorth{T<:QElement}(::AbstractElement{T}) = true
 
 """
 
-    order(el::Element)
+    order(el::AbstractElement)
 
   The polynomial order of the element's basis (shape) functions.
 """
-function order(el::Element)
+function order(el::AbstractElement)
 end
 
 """
@@ -77,21 +64,21 @@ end
 
 """
 
-    nVertices(el::Element, [d::Integer])
+    nVertices(el::Element [, d::Integer])
 
   The number of vertices that define the `d`-dimensional
   entities of the element.
 """
-@inline nVertices(el::Element, d::Integer) = nVertices(el)[d]
-@inline nVertices{T<:PElement}(el::Element{T}) = tuple(2:(dimension(el)+1)...)
-@inline nVertices{T<:QElement}(el::Element{T}) = tuple(2.^(1:dimension(el))...)
+nVertices(el::AbstractElement, d::Integer) = nVertices(el)[d]
+nVertices{T<:PElement}(el::AbstractElement{T}) = tuple(2:(dimension(el)+1)...)
+nVertices{T<:QElement}(el::AbstractElement{T}) = tuple(2.^(1:dimension(el))...)
 
-@inline nDoF(el::Element) = nDoF(el, dimension(el))
-function nDoF{T<:PElement}(el::Element{T}, d::Integer)
+nDoF(el::AbstractElement) = nDoF(el, dimension(el))
+function nDoF{T<:PElement}(el::AbstractElement{T}, d::Integer)
     #return map(*, dofTuple(el), binomial(dimension(el)+1, k) for k = 1:dimension(el)+1)
     return map(*, dofTuple(el), binomial(d+1, k) for k = 1:d+1)
 end
-function nDoF{T<:QElement}(el::Element{T})
+function nDoF{T<:QElement}(el::AbstractElement{T})
     if dimension(el) == 1
         return map(*, dofTuple(el), (2,1))
     elseif dimension(el) == 2
@@ -115,7 +102,7 @@ function evalBasis{T<:AbstractFloat}(el::Element,
                                      deriv::Integer=0)
     nP, nW = size(points)
     nB = nBasis(el, nW)
-    nC = ndims(el)
+    nC = 1 #ndims(el)
 
     if deriv == 0
         B = zeros(T, nB, nP, nC)
@@ -132,7 +119,7 @@ function evalBasis{T<:AbstractFloat}(el::Element,
 end
 
 include("lagrange.jl")
-
+include("vector.jl")
 include("mixed.jl")
 
 end # of module Elements
