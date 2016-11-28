@@ -16,32 +16,13 @@ export space, coeff, assemble, assemble!
 typealias Float AbstractFloat
 
 include("coefficients.jl")
-
-#--------------------#
-# Abstract Operators #
-#--------------------#
-abstract AbstractOperator
-
 include("basic.jl")
 
-# General Operator Methods
-"""
+#------------------------#
+# Variational Form Types #
+#------------------------#
+abstract AbstractVariationalForm
 
-    space(op::AbstractOperator)
-
-  Return the finite element space of the operator `op`.
-"""
-space{T<:AbstractOperator}(op::T) = getfield(op, :fes)
-
-"""
-
-    coeff(op::AbstractOperator)
-
-  Return the coefficient of the operator `op`.
-"""
-coeff{T<:AbstractOperator}(op::T) = getfield(op, :coeff)
-
-# Includes
 include("bilinear.jl")
 include("linear.jl")
 

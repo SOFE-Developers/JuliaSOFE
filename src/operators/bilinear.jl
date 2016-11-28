@@ -7,13 +7,13 @@ export matrix, matrix!, evaluate
 #-------------------------#
 # Bilinear Operator Types #
 #-------------------------#
-abstract BilinearOperator <: AbstractOperator
+abstract AbstractBilinearForm <: AbstractVariationalForm
 
 typealias AbsOp AbstractOperator
 typealias AbsCoeff AbstractCoefficient
 
 #----------------#
-# Operator Types #
+# Bilinear Form Types #
 #----------------#
 type Operator{C<:AbsCoeff,U<:AbsOp,V<:AbsOp} <: BilinearOperator
     fes :: FESpace
