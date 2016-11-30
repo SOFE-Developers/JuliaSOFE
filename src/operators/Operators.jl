@@ -21,7 +21,7 @@ include("basic.jl")
 #------------------------#
 # Variational Form Types #
 #------------------------#
-abstract AbstractVariationalForm
+abstract AbstractVariationalOperator
 
 include("bilinear.jl")
 include("linear.jl")

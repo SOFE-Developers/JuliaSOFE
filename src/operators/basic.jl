@@ -39,7 +39,7 @@ type id <: ScalarOperator end
 type Id <: VectorOperator end
 type ID <: MatrixOperator end
 
-function evaluate{T<:AbstractFloat}(op::Operator{id}, points::AbstractArray{T,2})
+function evaluate{T<:AbstractFloat}(::Operator{id}, points::AbstractArray{T,2})
     basis = evalBasis(element(fespace(op)), points, 0)
     @assert ndims(basis) == 3 && size(basis, 3) == 1 # nB x nP x 1
     return basis
@@ -54,7 +54,7 @@ end
 function evaluate{T<:AbstractFloat}(op::Operator{ID}, points::AbstractArray{T,2})
     BASIS = evalBasis(element(fespace(op)), points, 0)
     @assert ndims(BASIS) == 4 # nB x nP x nD x nD
-    return Basis
+    return BASIS
 end
 
 #-------------------------#
