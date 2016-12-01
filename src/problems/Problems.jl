@@ -5,7 +5,7 @@ module Problems
 using ..Spaces
 using ..Operators
 
-import ..Operators: space, assemble, assemble!
+import ..Operators: trialspace, testspace, assemble, assemble!
 
 export AbstractPDE, PDE
 export solve, assemble!, compute, system
@@ -18,8 +18,8 @@ abstract AbstractPDE
 # Type PDE #
 #----------#
 type PDE{T<:AbstractPDE} <: AbstractPDE
-    lhs :: Array{Operator,1}
-    rhs :: Array{Functional,1}
+    lhs :: Array{BilinearForm,1}
+    rhs :: Array{BilinearForm,1}
     solution :: Array{Float,1}
 end
 
@@ -28,20 +28,22 @@ end
 
 # Outer Constructors
 # -------------------
-function PDE{T<:AbstractPDE,To<:Operator,Tf<:Functional}(::Type{T},
-                                                         lhs::AbstractArray{To,1},
-                                                         rhs::AbstractArray{Tf,1})
+function PDE{T<:AbstractPDE,A<:BilinearForm,L<:LinearForm}(::Type{T},
+                                                           lhs::AbstractArray{A,1},
+                                                           rhs::AbstractArray{L,1})
     return PDE{T}(lhs, rhs, [])
 end
-PDE{T<:AbstractPDE}(::Type{T}, lhs::Operator, rhs::Functional) = PDE([lhs], [rhs])
-PDE{To<:Operator,Tf<:Functional}(lhs::AbstractArray{To,1}, rhs::AbstractArray{Tf,1}) = PDE(GenericPDE, lhs, rhs)
-PDE(lhs::Operator, rhs::Functional) = PDE([lhs], [rhs])
+PDE{T<:AbstractPDE}(::Type{T}, lhs::BilinearForm, rhs::LinearForm) = PDE([lhs], [rhs])
+PDE{A<:BilinearForm,L<:LinearForm}(lhs::AbstractArray{A,1}, rhs::AbstractArray{L,1}) = PDE(GenericPDE, lhs, rhs)
+PDE(lhs::BilinearForm, rhs::LinearForm) = PDE([lhs], [rhs])
 
 # Associated Methods
 # -------------------
 lhs(pde::AbstractPDE) = getfield(pde, :lhs)
 rhs(pde::AbstractPDE) = getfield(pde, :rhs)
-space(pde::AbstractPDE) = MixedFESpace(map(space, lhs(pde))...)
+
+trialspace(pde::AbstractPDE) = MixedFESpace(map(trialspace, lhs(pde))...)
+testspace(pde::AbstractPDE) = MixedFESpace(map(testspace, lhs(pde))...)
 
 function solve(pde::AbstractPDE)
     assemble!(pde)
@@ -63,11 +65,11 @@ end
 function compute(pde::AbstractPDE)
     free = freeDoF(space(pde))
     #w = interpolate(space(pde), shift(space(pde)))
-    w = vcat([interpolate(fes, shift(fes)) for fes in space(pde)]...)
+    w = vcat([interpolate(fes, shift(fes)) for fes in testspace(pde)]...)
     
     A, b = system(pde)
 
-    u = zeros(Float32, nDoF(space(pde)))
+    u = zeros(Float32, nDoF(trialspace(pde)))
     u[!free] = w[!free]
     u[free] = w[free] + A[free,free]\(b-A*w)[free]
 

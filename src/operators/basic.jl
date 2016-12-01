@@ -3,6 +3,7 @@ export AbstractOperator, ScalarOperator, VectorOperator, MatrixOperator
 export id, Id, ID
 export grad, Grad, GRAD
 export div, Div, DIV
+export evaluate
 
 abstract AbstractOperator
 
@@ -10,27 +11,27 @@ abstract ScalarOperator <: AbstractOperator
 abstract VectorOperator <: AbstractOperator
 abstract MatrixOperator <: AbstractOperator
 
-#---------------#
-# Type Operator #
-#---------------#
-type Operator{T<:AbstractOperator} <: AbstractOperator
-    fes :: FESpace
-    discrete :: Nullable{Vector}
-end
+# #---------------#
+# # Type Operator #
+# #---------------#
+# type Operator{T<:AbstractOperator} <: AbstractOperator
+#     fes :: FESpace
+#     discrete :: Nullable{Vector}
+# end
 
-# Outer Constructors
-# -------------------
-Operator{T<:AbstractOperator}(::Type{T}, fes::FESpace) = Operator{T}(fes, Nullable{Vector}())
+# # Outer Constructors
+# # -------------------
+# Operator{T<:AbstractOperator}(::Type{T}, fes::FESpace) = Operator{T}(fes, Nullable{Vector}())
 
-# Associated Methods
-# -------------------
-"""
+# # Associated Methods
+# # -------------------
+# """
 
-    space(op::AbstractOperator)
+#     space(op::AbstractOperator)
 
-  Return the finite element space of the operator `op`.
-"""
-fespace(op::Operator) = getfield(op, :fes)
+#   Return the finite element space of the operator `op`.
+# """
+# fespace(op::Operator) = getfield(op, :fes)
 
 #-------------------------#
 # Identity Operator Types #
@@ -39,20 +40,20 @@ type id <: ScalarOperator end
 type Id <: VectorOperator end
 type ID <: MatrixOperator end
 
-function evaluate{T<:AbstractFloat}(::Operator{id}, points::AbstractArray{T,2})
-    basis = evalBasis(element(fespace(op)), points, 0)
+function evaluate{T<:AbstractFloat}(::Type{id}, points::AbstractArray{T,2}, fes::FESpace)
+    basis = evalBasis(element(fes), points, 0)
     @assert ndims(basis) == 3 && size(basis, 3) == 1 # nB x nP x 1
     return basis
 end
 
-function evaluate{T<:AbstractFloat}(op::Operator{Id}, points::AbstractArray{T,2})
-    Basis = evalBasis(element(fespace(op)), points, 0)
+function evaluate{T<:AbstractFloat}(::Type{Id}, points::AbstractArray{T,2}, fes::FESpace)
+    Basis = evalBasis(element(fes), points, 0)
     @assert ndims(Basis) == 3 # nB x nP x nD
     return Basis
 end
 
-function evaluate{T<:AbstractFloat}(op::Operator{ID}, points::AbstractArray{T,2})
-    BASIS = evalBasis(element(fespace(op)), points, 0)
+function evaluate{T<:AbstractFloat}(::Type{ID}, points::AbstractArray{T,2}, fes::FESpace)
+    BASIS = evalBasis(element(fes), points, 0)
     @assert ndims(BASIS) == 4 # nB x nP x nD x nD
     return BASIS
 end
@@ -64,9 +65,9 @@ type grad <: ScalarOperator end
 type Grad <: VectorOperator end
 type GRAD <: MatrixOperator end
 
-function evaluate{T<:AbstractFloat}(op::Operator{Grad}, points::AbstractArray{T,2})
-    dBasis = evalBasis(element(fespace(op)), points, 1)
-    invdPhi = evalJacobianInverse(mesh(fespace(op)), points)
+function evaluate{T<:AbstractFloat}(::Type{Grad}, points::AbstractArray{T,2}, fes::FESpace)
+    dBasis = evalBasis(element(fes), points, 1)
+    invdPhi = evalJacobianInverse(mesh(fes), points)
 
     nB, nP, nC, nD = size(dBasis)
     nE, nP, nW, nD = size(invphi)
@@ -100,9 +101,9 @@ type div <: ScalarOperator end
 type Div <: VectorOperator end
 type DIV <: MatrixOperator end
 
-function evaluate{T<:AbstractFloat}(op::Operator{div}, points::AbstractArray{T,2})
-    dBasis = evalBasis(element(fespace(op)), points, 1)
-    invdPhi = evalJacobianInverse(mesh(fespace(op)), points)
+function evaluate{T<:AbstractFloat}(::Type{div}, points::AbstractArray{T,2}, fes::FESpace)
+    dBasis = evalBasis(element(fes), points, 1)
+    invdPhi = evalJacobianInverse(mesh(fes), points)
 
     nB, nP, nC, nD = size(dBasis)
     nE, nP, nW, nD = size(invphi)

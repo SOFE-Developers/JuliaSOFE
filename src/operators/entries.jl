@@ -15,7 +15,7 @@ typealias DATA Union{MatrixCoefficient, FunctionCoefficient}
 # -------------------
 
 # scalar coeff * scalar oper (local) * scalar oper (local)
-function fill_entries!{T<:Real,Tc<:data,Tu<:op,Tv<:op}(::Operator{Tc,Tu,Tv},
+function fill_entries!{T<:Real,Tc<:data,Tu<:op,Tv<:op}(::BilinearForm{Tc,Tu,Tv},
                                                        E::AbstractArray{T,3}, # nE x nBi x nBj
                                                        C::AbstractArray{T,2}, # nE x nP
                                                        U::AbstractArray{T,2}, # nBj x nP
@@ -41,7 +41,7 @@ function fill_entries!{T<:Real,Tc<:data,Tu<:op,Tv<:op}(::Operator{Tc,Tu,Tv},
 end
 
 # scalar coeff * vector oper (global) * vector oper (global)
-function fill_entries!{T<:Real,Tc<:data,Tu<:Op,Tv<:Op}(::Operator{Tc,Tu,Tv},
+function fill_entries!{T<:Real,Tc<:data,Tu<:Op,Tv<:Op}(::BilinearForm{Tc,Tu,Tv},
                                                        E::AbstractArray{T,3}, # nE x nBi x nBj
                                                        C::AbstractArray{T,2}, # nE x nP
                                                        U::AbstractArray{T,4}, # nE x nBj x nP x nD
@@ -66,7 +66,7 @@ function fill_entries!{T<:Real,Tc<:data,Tu<:Op,Tv<:Op}(::Operator{Tc,Tu,Tv},
 end
 
 # vector coeff * vector oper (global) * scalar oper (local)
-function fill_entries!{T<:Real,Tc<:Data,Tu<:Op,Tv<:op}(::Operator{Tc,Tu,Tv},
+function fill_entries!{T<:Real,Tc<:Data,Tu<:Op,Tv<:op}(::BilinearForm{Tc,Tu,Tv},
                                                        E::AbstractArray{T,3}, # nE x nBi x nBj
                                                        C::AbstractArray{T,3}, # nE x nP x nD
                                                        U::AbstractArray{T,4}, # nE x nBj x nP x nD
@@ -90,7 +90,7 @@ function fill_entries!{T<:Real,Tc<:Data,Tu<:Op,Tv<:op}(::Operator{Tc,Tu,Tv},
 end
 
 # matrix coeff * vector oper (global) * vector oper (global)
-function fill_entries!{T<:Real,Tc<:DATA,Tu<:Op,Tv<:Op}(::Operator{Tc,Tu,Tv},
+function fill_entries!{T<:Real,Tc<:DATA,Tu<:Op,Tv<:Op}(::BilinearForm{Tc,Tu,Tv},
                                                        E::AbstractArray{T,3}, # nE x nBi x nBj
                                                        C::AbstractArray{T,4}, # nE x nP x nD x nD
                                                        U::AbstractArray{T,4}, # nE x nBj x nP x nD
@@ -119,7 +119,7 @@ end
 # -----------------
 
 # scalar coeff * scalar operator (local)
-function fill_entries!{T<:Real,Tc<:data,Tv<:op}(::Functional{Tc,Tv},
+function fill_entries!{T<:Real,Tc<:data,Tv<:op}(::LinearForm{Tc,Tv},
                                                 E::AbstractArray{T,2},
                                                 C::AbstractArray{T,2},
                                                 V::AbstractArray{T,2},
@@ -139,7 +139,7 @@ function fill_entries!{T<:Real,Tc<:data,Tv<:op}(::Functional{Tc,Tv},
 end
 
 # vector coeff * vector operator (local)
-function fill_entries!{T<:Real,Tc<:Data,Tv<:Op}(::Functional{Tc,Tv},
+function fill_entries!{T<:Real,Tc<:Data,Tv<:Op}(::LinearForm{Tc,Tv},
                                                 E::AbstractArray{T,2},
                                                 C::AbstractArray{T,3},
                                                 V::AbstractArray{T,3},
@@ -163,7 +163,7 @@ function fill_entries!{T<:Real,Tc<:Data,Tv<:Op}(::Functional{Tc,Tv},
 end
 
 # vector coeff * vector operator (global)
-function fill_entries!{T<:Real,Tc<:Data,Tv<:Op}(::Functional{Tc,Tv},
+function fill_entries!{T<:Real,Tc<:Data,Tv<:Op}(::LinearForm{Tc,Tv},
                                                 E::AbstractArray{T,2},
                                                 C::AbstractArray{T,3},
                                                 V::AbstractArray{T,4},

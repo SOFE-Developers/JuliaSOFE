@@ -29,15 +29,15 @@ include("linear.jl")
 #---------------------#
 # Assembling Routines #
 #---------------------#
-assemble(op::AbstractOperator) = assemble(op, dimension(mesh(space(op))))
-assemble!(op::AbstractOperator) = assemble!(op, dimension(mesh(space(op))))
-assemble!(op::Operator, d::Integer) = matrix!(op, assemble(op, d))
-assemble!(fnc::Functional, d::Integer) = vector!(fnc, assemble(fnc, d))
+assemble(op::AbstractVariationalOperator) = assemble(op, dimension(mesh(testspace(op))))
+assemble!(op::AbstractVariationalOperator) = assemble!(op, dimension(mesh(testspace(op))))
+assemble!(a::BilinearForm, d::Integer) = matrix!(a, assemble(a, d))
+assemble!(l::LinearForm, d::Integer) = vector!(l, assemble(l, d))
 
-function assemble(op::Operator, d::Integer)
-    qpoints, qweights = quadData(op.quadrule, d)
+function assemble(a::BilinearForm, d::Integer)
+    qpoints, qweights = quadData(a.quadrule, d)
     
-    fes = space(op)
+    fes = trialspace(a)
     dMap = dofMap(fes, d=d)
     ndof = nDoF(fes)
     
@@ -56,20 +56,20 @@ function assemble(op::Operator, d::Integer)
         end
     end
     
-    C, U, V = evaluate(op, d)
-    Det = abs(evalJacobianDeterminat(fes.mesh, qpoints))
+    C, U, V = evaluate(a, d)
+    Det = abs(evalJacobianDeterminat(mesh(fes), qpoints))
     
     entries = zeros(eltype(qpoints), nE, nB, nB)
-    fill_entries!(op, entries, C, U, V, qweights, Det)
+    fill_entries!(a, entries, C, U, V, qweights, Det)
 
     A = sparse(dofI[:], dofJ[:], entries[:], ndof, ndof)
     return A
 end
 
-function assemble(fnc::Functional, d::Integer)
-    qpoints, qweights = quadData(fnc.quadrule, d)
+function assemble(l::LinearForm, d::Integer)
+    qpoints, qweights = quadData(l.quadrule, d)
 
-    fes = space(fnc)
+    fes = testspace(l)
     dMap = dofMap(fes, d=d)
     ndof = Spaces.nDoF(fes)
 
@@ -84,11 +84,11 @@ function assemble(fnc::Functional, d::Integer)
         end
     end
     
-    C, V = evaluate(fnc, d)
-    Det = abs(evalJacobianDeterminat(fes.mesh, qpoints))
+    C, V = evaluate(l, d)
+    Det = abs(evalJacobianDeterminat(mesh(fes), qpoints))
     
     entries = zeros(eltype(qpoints), nE, nB)
-    fill_entries!(fnc, entries, C, V, qweights, Det)
+    fill_entries!(l, entries, C, V, qweights, Det)
 
     L = sparsevec(dofI[:], entries[:], ndof)
     return full(L)
