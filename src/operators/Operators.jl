@@ -38,7 +38,7 @@ function assemble(a::BilinearForm, d::Integer)
     qpoints, qweights = quadData(a.quadrule, d)
     
     fes = trialspace(a)
-    dMap = dofMap(fes, d=d)
+    dMap = dofMap(fes, d)
     ndof = nDoF(fes)
     
     nB, nE = size(dMap)
@@ -70,7 +70,7 @@ function assemble(l::LinearForm, d::Integer)
     qpoints, qweights = quadData(l.quadrule, d)
 
     fes = testspace(l)
-    dMap = dofMap(fes, d=d)
+    dMap = dofMap(fes, d)
     ndof = Spaces.nDoF(fes)
 
     nB, nE = size(dMap)

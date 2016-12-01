@@ -188,8 +188,8 @@ end
   * `mask::Vector{T<:Integer}`: A mask marking specific entities
                     for which to compute the dof indices
 """
-function dofIndices(fes::FESpace; kwargs...)
-    M = dofMap(fes; kwargs...)
+function dofIndices(fes::FESpace, args...)
+    M = dofMap(fes, args...)
     return sort!(unique(M))
 end
 
@@ -207,15 +207,15 @@ end
   * `mask::Vector{T<:Integer}`: A mask marking specific entities
                     for which to compute the dof mask
 """
-function dofMask(fes::FESpace; kwargs...)
+function dofMask(fes::FESpace, args...)
     mask = zeros(Bool, nDoF(fes))
-    for i in dofIndices(fes; kwargs...)
+    for i in dofIndices(fes, args...)
         mask[i] = true
     end
     return mask
 end
 
-extractDoF(fes::FESpace; kwargs...) = dofMask(fes; kwargs...)
+extractDoF(fes::FESpace, args...) = dofMask(fes, args...)
 
 function interpolate(m::Mesh, el::Element, f::Function)
     @assert isnodal(el)

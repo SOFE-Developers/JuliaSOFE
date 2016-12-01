@@ -19,7 +19,7 @@ abstract AbstractPDE
 #----------#
 type PDE{T<:AbstractPDE} <: AbstractPDE
     lhs :: Array{BilinearForm,1}
-    rhs :: Array{BilinearForm,1}
+    rhs :: Array{LinearForm,1}
     solution :: Array{Float,1}
 end
 
@@ -63,9 +63,9 @@ function assemble!(pde::AbstractPDE)
 end
 
 function compute(pde::AbstractPDE)
-    free = freeDoF(space(pde))
+    free = freeDoF(trialspace(pde))
     #w = interpolate(space(pde), shift(space(pde)))
-    w = vcat([interpolate(fes, shift(fes)) for fes in testspace(pde)]...)
+    w = vcat([interpolate(fes, shift(fes)) for fes in trialspace(pde)]...)
     
     A, b = system(pde)
 

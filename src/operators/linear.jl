@@ -15,7 +15,7 @@ end
 # Outer Constructors
 # -------------------
 function LinearForm{C<:AbstractCoefficient,V<:AbstractOperator}(::Type{V}, fes::FESpace, coeff::C)
-    if issubtype(Elements.type_(fes.element), PElement)
+    if issimp(element(fes))
         qrule = QuadRuleSimp2()
     else
         error("Currently only simplical elements supported...")
@@ -52,10 +52,10 @@ coeff(l::LinearForm) = getfield(l, :coeff)
   Return the discretized version of the linear operator `l`.
 """
 vector{T<:LinearForm}(l::T) = getfield(l, :vector)
-vector!{T<:LinearForm}(l::T, L::Vector) = setfield!(l, :vector, L)
+vector!{T<:LinearForm}(l::T, L::Vector) = setfield!(l, :vector, Nullable{Vector}(L))
 
 function evaluate{C<:AbstractCoefficient,V<:AbstractOperator}(l::LinearForm{C,V}, d::Integer)
-    points = qpoints(a.quadrule, d)
+    points = qpoints(l.quadrule, d)
 
     c = evaluate(coeff(l), points, mesh(testspace(l)))
     v = evaluate(V, points, testspace(l))

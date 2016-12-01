@@ -70,7 +70,7 @@ function evaluate{T<:AbstractFloat}(::Type{Grad}, points::AbstractArray{T,2}, fe
     invdPhi = evalJacobianInverse(mesh(fes), points)
 
     nB, nP, nC, nD = size(dBasis)
-    nE, nP, nW, nD = size(invphi)
+    nE, nP, nW, nD = size(invdPhi)
     @assert nC == 1
 
     G = zeros(T, nE, nB, nP, nD)
@@ -106,7 +106,7 @@ function evaluate{T<:AbstractFloat}(::Type{div}, points::AbstractArray{T,2}, fes
     invdPhi = evalJacobianInverse(mesh(fes), points)
 
     nB, nP, nC, nD = size(dBasis)
-    nE, nP, nW, nD = size(invphi)
+    nE, nP, nW, nD = size(invdPhi)
 
     D = zeros(T, nE, nB, nP)
 
