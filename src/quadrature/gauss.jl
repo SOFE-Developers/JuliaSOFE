@@ -12,22 +12,22 @@ type Gauss <: AbstractQuadRule
 end
 
 function GaussQuadOrth(order::Integer, dim::Integer)
-    nw = (gaussquadorth(order, d) for d = 1:dim)
+    n = Int(ceil((order+1)/2))
+    nodesweights = (gaussquadorth(n, d, :legendre) for d = 1:dim)
     nodes, weights = collect(zip(nw...))
 
     return QuadRule{Gauss}(order, nodes, weights)
 end
 
 function GaussQuadSimp(order::Integer, dim::Integer)
-    nw = (gaussquadsimp(order, d) for d = 1:dim)
-    nodes, weights = collect(zip(nw...))
+    n = Int(ceil((order+1)/2))
+    nodesweights = (gaussquadsimp(n, d, :legendre) for d = 1:dim)
+    nodes, weights = collect(zip(nodesweights...))
 
     return QuadRule{Gauss}(order, nodes, weights)
 end
 
-function gaussquadorth(order::Integer, dim::Integer, ntype::Symbol=:legendre)
-    n = Int(ceil((order+1)/2))
-
+function gaussquadorth(n::Integer, dim::Integer, ntype::Symbol=:legendre)
     if ntype == :chebyshev
         nodes, weights = gausschebyshev(n)
     elseif ntype == :hermite
@@ -62,8 +62,8 @@ function gaussquadorth(order::Integer, dim::Integer, ntype::Symbol=:legendre)
     return nodes, weights
 end
 
-function gaussquadsimp(order::Integer, dim::Integer, ntype::Symbol=:legendre)
-    nodes, weights = gaussquadorth(order, dim, ntype)
+function gaussquadsimp(n::Integer, dim::Integer, ntype::Symbol=:legendre)
+    nodes, weights = gaussquadorth(n, dim, ntype)
 
     if dim == 1
         #...
