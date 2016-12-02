@@ -1,3 +1,6 @@
+export MixedFESpace
+export subspaces, sub, subspace, add, addspace
+
 #-------------------#
 # Type MixedFESpace #
 #-------------------#
@@ -18,11 +21,22 @@ subspaces(mfes::MixedFESpace) = getfield(mfes, :subspaces)
 
 """
 
-    subspace(mfes::MixedFESpace, i::Integer)
+    sub(mfes::MixedFESpace, i::Integer)
 
   Return the `i`th subspace of the mixed finite element space.
 """
-subspace(mfes::MixedFESpace, i::Integer) = subspaces(mfes)[i]
+sub(mfes::MixedFESpace, i::Integer) = subspaces(mfes)[i]
+subspace(mfes::MixedFESpace, i::Integer) = sub(mfes, i)
+
+"""
+
+    add(mfes::MixedFESpace, fes::AbstractFESpace)
+
+  Add the finite element space `fes` to the mixed finite element
+  space `mfes`.
+"""
+add(mfes::MixedFESpace, fes::AbstractFESpace) = push!(mfes.subspaces, fes)
+addspace(mfes::MixedFESpace, fes::AbstractFESpace) = add(mfes, fes)
 
 fixedDoF(mfes::MixedFESpace) = mapreduce(fixedDoF, vcat, subspaces(mfes))
 freeDoF(mfes::MixedFESpace) = mapreduce(freeDoF, vcat, subspaces(mfes))

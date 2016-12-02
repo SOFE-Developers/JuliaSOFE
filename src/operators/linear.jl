@@ -1,72 +1,67 @@
 # EXPORTS
-export LinearOperator, Functional
-export fid
-export vector, vector!, evaluate
+export LinearForm
+export testspace, coeff, vector, vector!, evaluate
 
-abstract LinearOperator <: AbstractOperator
-
-#------------------#
-# Functional Types #
-#------------------#
-type Functional{C<:AbstractCoefficient,V<:AbstractOperator} <: LinearOperator
-    fes :: FESpace
+#-------------------#
+# Linear Form Types #
+#-------------------#
+type LinearForm{C<:AbstractCoefficient,V<:AbstractOperator} <: AbstractVariationalOperator
+    testspace :: FESpace
     coeff :: C
-    vector :: Vector
     quadrule :: QuadRule
+    vector :: Nullable{Vector}
 end
 
 # Outer Constructors
 # -------------------
-function Functional{C<:AbstractCoefficient,V<:AbstractOperator}(::Type{V}, fes::FESpace, coeff::C)
-    if issubtype(Elements.type_(fes.element), PElement)
+function LinearForm{C<:AbstractCoefficient,V<:AbstractOperator}(::Type{V}, fes::FESpace, coeff::C)
+    if issimp(element(fes))
         qrule = QuadRuleSimp2()
     else
         error("Currently only simplical elements supported...")
     end
-
-    return Functional{C,V}(fes, coeff, zeros(nDoF(fes)), qrule)
+    vec = Nullable{Vector}()
+    return LinearForm{C,V}(fes, coeff, qrule, vec)
 end
 
-function Functional{V<:AbstractOperator, T<:Real}(::Type{V}, fes::FESpace, coeff::T)
-    return Functional(V, fes, ScalarCoefficient(coeff))
+function LinearForm{V<:AbstractOperator, T<:Real}(::Type{V}, fes::FESpace, coeff::T)
+    return LinearForm(V, fes, ScalarCoefficient(coeff))
 end
 
-function Functional{V<:AbstractOperator, T<:AbstractVector}(::Type{V}, fes::FESpace, coeff::T)
-    return Functional(V, fes, VectorCoefficient(coeff))
+function LinearForm{V<:AbstractOperator, T<:AbstractVector}(::Type{V}, fes::FESpace, coeff::T)
+    return LinearForm(V, fes, VectorCoefficient(coeff))
 end
     
-function Functional{V<:AbstractOperator, T<:AbstractMatrix}(::Type{V}, fes::FESpace, coeff::T)
-    return Functional(V, fes, MatrixCoefficient(coeff))
+function LinearForm{V<:AbstractOperator, T<:AbstractMatrix}(::Type{V}, fes::FESpace, coeff::T)
+    return LinearForm(V, fes, MatrixCoefficient(coeff))
 end
 
-function Functional{V<:AbstractOperator, T<:Function}(::Type{V}, fes::FESpace, coeff::T)
-    return Functional(V, fes, FunctionCoefficient(coeff))
+function LinearForm{V<:AbstractOperator, T<:Function}(::Type{V}, fes::FESpace, coeff::T)
+    return LinearForm(V, fes, FunctionCoefficient(coeff))
 end
 
 # Associated Methods
 # -------------------
+Base.show{C<:AbstractCoefficient,V<:AbstractOperator}(io::IO, l::LinearForm{C,V}) =
+    print("LinearForm{", V, "}")
+
+testspace(l::LinearForm) = getfield(l, :testspace)
+coeff(l::LinearForm) = getfield(l, :coeff)
+
 """
 
-    vector(l::LinearOperator)
+    vector(l::LinearForm)
 
   Return the discretized version of the linear operator `l`.
 """
-@inline vector{T<:LinearOperator}(l::T) = getfield(l, :vector)
-@inline vector!{T<:LinearOperator}(l::T, L::Vector) = setfield!(l, :vector, L)
+vector{T<:LinearForm}(l::T) = get(getfield(l, :vector))
+vector!{T<:LinearForm}(l::T, L::Vector) = setfield!(l, :vector, Nullable{Vector}(L))
 
-#------------#
-# Type fid   #
-#------------#
-type fid <: LinearOperator
+function evaluate{C<:AbstractCoefficient,V<:AbstractOperator}(l::LinearForm{C,V}, d::Integer)
+    points = qpoints(l.quadrule, d)
+
+    c = evaluate(coeff(l), points, mesh(testspace(l)))
+    v = evaluate(V, points, testspace(l))
+
+    return c, v
 end
-fid(fes::FESpace, coeff) = Functional(id, fes, coeff)
-
-function evaluate{C<:AbstractCoefficient}(fnc::Functional{C,id}, d::Integer)
-    points = qpoints(fnc.quadrule, d)
-    c = evaluate(coeff(fnc), points, mesh(space(fnc)))
-    basis = evalBasis(element(space(fnc)), points, 0)
-    @assert ndims(basis) == 3 && size(basis, 3) == 1
-    basis = view(basis, :, :, 1)
-    return c, basis
-end
-

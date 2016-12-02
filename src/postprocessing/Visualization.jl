@@ -4,6 +4,7 @@ using PyCall
 
 using ..Elements
 using ..Meshes
+using ..MeshGeneration
 using ..Spaces
 
 export plot
@@ -77,7 +78,7 @@ function plot(el::Element, i::Integer; resolution::Integer=100,
         pyvisofe[:plot](x, y)
     elseif D == 2
         x = n[:,1]; y = n[:,2]; z = basis[i,:]
-        faces = entities(m, 2) - 1
+        faces = entities(vismesh, 2) - 1
 
         pyvisofe[:trisurface](x, y, z, faces)
     elseif D == 3

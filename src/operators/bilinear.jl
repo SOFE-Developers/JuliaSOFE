@@ -1,115 +1,75 @@
 # EXPORTS
-export BilinearOperator, Operator
-export idid
-export GradGrad
-export matrix, matrix!, evaluate
+export BilinearForm
+export trialspace, testspace, coeff, matrix, matrix!, evaluate
 
-#-------------------------#
-# Bilinear Operator Types #
-#-------------------------#
-abstract BilinearOperator <: AbstractOperator
-
+#---------------------#
+# Bilinear Form Types #
+#---------------------#
 typealias AbsOp AbstractOperator
 typealias AbsCoeff AbstractCoefficient
 
-#----------------#
-# Operator Types #
-#----------------#
-type Operator{C<:AbsCoeff,U<:AbsOp,V<:AbsOp} <: BilinearOperator
-    fes :: FESpace
+type BilinearForm{C<:AbsCoeff,U<:AbsOp,V<:AbsOp} <: AbstractVariationalOperator
+    trialspace :: FESpace
+    testspace :: FESpace
     coeff :: C
-    matrix :: SparseMatrixCSC
     quadrule :: QuadRule
+    matrix :: Nullable{SparseMatrixCSC}
 end
 
 # Outer Constructors
 # -------------------
-function Operator{U<:AbsOp,V<:AbsOp,C<:AbsCoeff}(::Type{U}, ::Type{V}, fes::FESpace, coeff::C)
-    if issubtype(Elements.type_(fes.element), PElement)
+function BilinearForm{U<:AbsOp,V<:AbsOp,C<:AbsCoeff}(::Type{U}, ::Type{V}, fes::FESpace, coeff::C)
+    if issimp(element(fes))
         qrule = QuadRuleSimp2()
     else
         error("Currently only simplical elements supported...")
     end
-
-    return Operator{C,U,V}(fes, coeff, Matrix(), qrule)
+    mat = Nullable{SparseMatrixCSC}()
+    return BilinearForm{C,U,V}(fes, fes, coeff, qrule, mat)
 end
 
-function Operator{U<:AbsOp,V<:AbsOp,T<:Real}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
-    return Operator(U, V, fes, ScalarCoefficient(coeff))
+function BilinearForm{U<:AbsOp,V<:AbsOp,T<:Real}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
+    return BilinearForm(U, V, fes, ScalarCoefficient(coeff))
 end
 
-function Operator{U<:AbsOp,V<:AbsOp,T<:AbstractVector}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
-    return Operator(U, V, fes, VectorCoefficient(coeff))
+function BilinearForm{U<:AbsOp,V<:AbsOp,T<:AbstractVector}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
+    return BilinearForm(U, V, fes, VectorCoefficient(coeff))
 end
     
-function Operator{U<:AbsOp,V<:AbsOp,T<:AbstractMatrix}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
-    return Operator(U, V, fes, MatrixCoefficient(coeff))
+function BilinearForm{U<:AbsOp,V<:AbsOp,T<:AbstractMatrix}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
+    return BilinearForm(U, V, fes, MatrixCoefficient(coeff))
 end
 
-function Operator{U<:AbsOp,V<:AbsOp,T<:Function}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
-    return Operator(U, V, fes, FunctionCoefficient(coeff))
+function BilinearForm{U<:AbsOp,V<:AbsOp,T<:Function}(::Type{U}, ::Type{V}, fes::FESpace, coeff::T)
+    return BilinearForm(U, V, fes, FunctionCoefficient(coeff))
 end
 
 # Associated methods
 # -------------------
+Base.show{C<:AbsCoeff,U<:AbsOp,V<:AbsOp}(io::IO, a::BilinearForm{C,U,V}) =
+    print("BilinearForm{", U, ",", V, "}")
+
+trialspace(a::BilinearForm) = getfield(a, :trialspace)
+testspace(a::BilinearForm) = getfield(a, :testspace)
+coeff(a::BilinearForm) = getfield(a, :coeff)
+
 """
 
-    matrix(a::BilinearOperator)
+    matrix(a::BilinearForm)
 
   Return the discretized version of the bilinear operator `a`.
 """
-@inline matrix{T<:BilinearOperator}(a::T) = getfield(a, :matrix)
-@inline matrix!{T<:BilinearOperator}(a::T, A::SparseMatrixCSC) = setfield!(a, :matrix, A)
+matrix(a::BilinearForm) = get(getfield(a, :matrix))
+matrix!(a::BilinearForm, A::SparseMatrixCSC) = setfield!(a, :matrix, Nullable{SparseMatrixCSC}(A))
 
-#-------------------------#
-# L2 Scalar Product Types #
-#-------------------------#
-type idid <: BilinearOperator
-end
-idid(fes::FESpace, coeff) = Operator(id, id, fes, coeff)
-
-function evaluate{C<:AbstractCoefficient}(op::Operator{C,id,id}, d::Integer)
-    points = qpoints(op.quadrule, d)
-    c = evaluate(coeff(op), points, mesh(space(op)))
-    basis = evalBasis(element(space(op)), points, 0)
-    @assert ndims(basis) == 3 && size(basis, 3) == 1
-    basis = view(basis, :, :, 1)
-    return c, basis, basis
-end
-
-#-----------------#
-# Diffusion Types #
-#-----------------#
-type GradGrad <: BilinearOperator
-end
-GradGrad(fes, coeff) = Operator(Grad, Grad, fes, coeff)
-
-function evaluate{C<:AbstractCoefficient}(op::Operator{C,Grad,Grad}, d::Integer)
-    points = qpoints(op.quadrule, d)
-
-    c = evaluate(coeff(op), points, mesh(space(op)))
+function evaluate{C<:AbsCoeff,U<:AbsOp,V<:AbsOp}(a::BilinearForm{C,U,V}, d::Integer)
+    points = qpoints(a.quadrule, d)
     
-    dbasis = evalBasis(element(space(op)), points, 1)
-    invdphi = evalJacobianInverse(mesh(space(op)), points)
+    c = evaluate(coeff(a), points, mesh(trialspace(a)))
+    u = evaluate(U, points, trialspace(a))
+    v = evaluate(V, points, testspace(a))
 
-    nE, nP, nW, nD = size(invdphi)
-    nB, nP, nC, nD = size(dbasis)
-    @assert nC == 1
-
-    grad = zeros(eltype(points), nE, nB, nP, nD)
-
-    for id = 1:nD
-        for iw = 1:nW
-            for ip = 1:nP
-                for ib = 1:nB
-                    for ie = 1:nE
-                        grad[ie,ib,ip,id] += invdphi[ie,ip,iw,id] * dbasis[ib,ip,1,id]
-                    end
-                end
-            end
-        end
-    end
-
-    return c, grad, grad
+    return c, u, v
 end
+
 

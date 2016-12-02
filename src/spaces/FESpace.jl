@@ -81,7 +81,7 @@ shift!(fes::FESpace, f::Function) = setfield!(fes, :shift, f)
 function fixedDoF(fes::FESpace)
     dim = dimension(mesh(fes)) - 1
     bmask = boundary(mesh(fes), domain(fes))
-    return extractDoF(fes, d=dim, mask=bmask)
+    return extractDoF(fes, dim, bmask)
 end
 
 """
@@ -95,7 +95,7 @@ freeDoF(fes::FESpace) = !fixedDoF(fes)
 
 """
 
-    dofMap(fes::FESpace, d::Integer)
+    dofMap(fes::FESpace, d::Integer, mask::AbstractVector)
 
   Return the degrees of freedom mapping that connects the global mesh
   entities of topological dimension `d` to the local reference element.
@@ -105,39 +105,63 @@ freeDoF(fes::FESpace) = !fixedDoF(fes)
   local basis function  on the reference element to the `k`-th global basis 
   function on the `j`-th element.
 
-  # Keyword Arguments
+  # Arguments
   * `d::Integer`: The topological dimension of the entities
                     for which to compute the dof map
   * `mask::Vector{T<:Integer}`: A mask marking specific entities
                     for which to compute the dof map
 """
-function dofMap{T<:Integer}(fes::FESpace;
-                d::Integer = dimension(mesh(fes)),
-                mask::AbstractArray{T,1} = 1:number(mesh(fes), d))
-    dofTuple = Elements.dofTuple(element(fes))
-    dofPerDim = nDoF(element(fes), d)
-    nEntities = [number(fes.mesh.topology, dd) for dd = 0:d]
-    dofsNeeded = [nEntities[dd+1] * dofTuple[dd+1] for dd = 0:d]
-    ndofs = [0, cumsum(dofsNeeded)...]
-    dofs = [reshape(ndofs[i]+1:ndofs[i+1], dofTuple[i], nEntities[i]) for i = 1:d+1]
+function dofMap{T<:Integer}(fes::FESpace, d::Integer, mask::AbstractArray{T,1})
+    dofs = generateDoFs(element(fes), mesh(fes), d)
+    ndof = nDoF(element(fes), d)
 
-    M = [zeros(Int, dofPerDim[i], nEntities[d+1]) for i = 1:d+1]
+    #M = zeros(T, sum(ndof), number(mesh(fes), d))
+    M = zeros(Int, sum(ndof), number(mesh(fes), d))
 
-    # first, iterate over subdims
+    rb = 0
     for dd = 0:d-1
         d_dd = connectivity(topology(mesh(fes)), d, dd)
-        for i = 1:size(d_dd, 1)
-            for j = 1:size(d_dd, 2)
-                r = (j-1)*dofTuple[dd+1]+1 : j*dofTuple[dd+1]
-                M[dd+1][r,i] = dofs[dd+1][:,d_dd[i,j]]
-            end
+        ra = rb + 1; rb += ndof[dd+1]
+        fill_dofMap!(view(M, ra:rb, :), dofs[dd+1], d_dd)
+    end
+
+    for j = 1:size(dofs[d+1], 2)
+        for i = 1:size(dofs[d+1], 1)
+            M[rb+i,j] = dofs[d+1][i,j]
         end
     end
 
-    # set dofs of query dim
-    M[d+1] = dofs[d+1]
+    return M[:,mask]
+end
+dofMap(fes::FESpace, d::Integer) = dofMap(fes, d, 1:number(mesh(fes), d))
+dofMap(fes::FESpace) = dofMap(fes, dimension(element(fes)))
 
-    return vcat(M...)[:,mask]
+function fill_dofMap!{T<:Integer}(M::AbstractArray{T,2}, dofs::AbstractArray{T,2}, inc::AbstractArray{T,2})
+    ptr = 1
+    for i = 1:size(inc, 1)
+        for j = 1:size(inc, 2)
+            for k = 1:size(dofs, 1)
+                M[ptr,i] = dofs[k, inc[i,j]]
+                ptr += 1
+            end
+        end
+        ptr = 1
+    end
+    return nothing
+end
+
+function generateDoFs{T<:AbstractElement}(elem::T, mesh::Mesh, d::Integer)
+    doftuple = dofTuple(elem)
+    nentities = [number(mesh, dd) for dd = 0:d]
+    ndofs = map(*, doftuple, nentities)
+    dofrange = [1, 1 + cumsum(ndofs)...]
+    dofs = [reshape(dofrange[i]:dofrange[i+1]-1, doftuple[i], nentities[i])
+            for i = 1:d+1]
+
+    return dofs
+end
+
+function assembleDoFs{T<:Integer}(dofs::AbstractArray{T,1}, d::Integer)
 end
 
 """
@@ -148,51 +172,51 @@ end
   finite element space `fes`.
 """
 function nDoF(fes::FESpace)
-    return maxabs(dofMap(fes, d=dimension(mesh(fes))))
+    return maxabs(dofMap(fes, dimension(mesh(fes))))
 end
 
 """
 
-    dofIndices(fes::FESpace; kwargs...)
+    dofIndices(fes::FESpace, args...)
 
   Return the indices of the degrees of freedom for the finite
   element space `fes` associated with the mesh entities of 
   topological dimension `d`.
 
-  # Keyword Arguments
+  # Arguments
   * `d::Integer`: The topological dimension of the entities
                     for which to compute the dof indices
   * `mask::Vector{T<:Integer}`: A mask marking specific entities
                     for which to compute the dof indices
 """
-function dofIndices(fes::FESpace; kwargs...)
-    M = dofMap(fes; kwargs...)
+function dofIndices(fes::FESpace, args...)
+    M = dofMap(fes, args...)
     return sort!(unique(M))
 end
 
 """
 
-    dofMask(fes::FESpace; kwargs...)
+    dofMask(fes::FESpace, args...)
 
   Return a boolean mask specifying the degrees of freedom
   for the finite element space `fes` associated with the 
   mesh entities of topological dimension `d`.
 
-  # Keyword Arguments
+  # Arguments
   * `d::Integer`: The topological dimension of the entities
                     for which to compute the dof mask
   * `mask::Vector{T<:Integer}`: A mask marking specific entities
                     for which to compute the dof mask
 """
-function dofMask(fes::FESpace; kwargs...)
+function dofMask(fes::FESpace, args...)
     mask = zeros(Bool, nDoF(fes))
-    for i in dofIndices(fes; kwargs...)
+    for i in dofIndices(fes, args...)
         mask[i] = true
     end
     return mask
 end
 
-extractDoF(fes::FESpace; kwargs...) = dofMask(fes; kwargs...)
+extractDoF(fes::FESpace, args...) = dofMask(fes, args...)
 
 function interpolate(m::Mesh, el::Element, f::Function)
     @assert isnodal(el)
@@ -218,15 +242,15 @@ interpolate(fes::FESpace, f::Function) = interpolate(fes.mesh, fes.element, f)
   space's basis functions or their derivatives in the 
   given local `points` w.r.t. the given `dof` values.
 """
-function evaluate{T<:Float,S<:Float}(fes::FESpace, dof::AbstractVector{S},
+function evaluate{T<:Float,S<:Float}(fes::FESpace, dofs::AbstractVector{S},
                                      points::AbstractArray{T,2}, deriv::Integer=0)
     nP, dimP = size(points)
-    dofmap = dofMap(fes, d=dimP)
+    dofmap = dofMap(fes, dimP)
     nB, nE = size(dofmap)
     basis = evalBasis(element(fes), points, deriv)
     nB, nP, nC, nD = size(basis, 1:4...)
 
-    dof = convert(Vector{promote_type(T, S)}, dof)
+    dofs = convert(Vector{promote_type(T, S)}, dofs)
     
     if deriv == 0
         @assert nD == 1
@@ -237,13 +261,13 @@ function evaluate{T<:Float,S<:Float}(fes::FESpace, dof::AbstractVector{S},
         U = zeros(T,nE,nP,nC,nD,nD)
     end
 
-    fill_dofvalues!(U, basis, dof, dofmap)
+    fill_dofvalues!(U, basis, dofs, dofmap)
 
     return U
 end
 
 function fill_dofvalues!{T<:AbstractFloat}(U::AbstractArray{T,3}, basis::Array{T,3},
-                                   dof::AbstractVector{T}, dofmap::Array{Int,2})
+                                   dofs::AbstractVector{T}, dofmap::Array{Int,2})
     nE, nP, nC = size(U)
     nB, nP, nC = size(basis)
     nB, nE = size(dofmap)
@@ -252,7 +276,7 @@ function fill_dofvalues!{T<:AbstractFloat}(U::AbstractArray{T,3}, basis::Array{T
         for ip = 1:nP
             for ie = 1:nE
                 for ib = 1:nB
-                    U[ie,ip,ic] += dof[dofmap[ib,ie]] * basis[ib,ip,ic]
+                    U[ie,ip,ic] += dofs[dofmap[ib,ie]] * basis[ib,ip,ic]
                 end
             end
         end
@@ -262,27 +286,27 @@ function fill_dofvalues!{T<:AbstractFloat}(U::AbstractArray{T,3}, basis::Array{T
 end
 
 function fill_dofvalues!{T<:AbstractFloat}(U::Array{T,4}, basis::Array{T,4},
-                                   dof::AbstractVector{T}, dofmap::Array{Int,2})
+                                   dofs::AbstractVector{T}, dofmap::Array{Int,2})
     nE, nP, nC, nD = size(U)
     nB, nP, nC, nD = size(basis)
     nB, nE = size(dofmap)
     
     for id = 1:nD
-        fill_dofvalues!(view(U, :, :, :, id), basis[:,:,:,id], dof, dofmap)
+        fill_dofvalues!(view(U, :, :, :, id), basis[:,:,:,id], dofs, dofmap)
     end
 
     return nothing
 end
 
 function fill_dofvalues!{T<:AbstractFloat}(U::Array{T,5}, basis::Array{T,5},
-                                   dof::AbstractVector{T}, dofmap::Array{Int,2})
+                                   dofs::AbstractVector{T}, dofmap::Array{Int,2})
     nE, nP, nC, nDi, nDj = size(U)
     nB, nP, nC, nDi, nDj = size(basis)
     nB, nE = size(dofmap)
 
     for jd = 1:nDj
         for id = 1:nDi
-            fill_dofvalues!(view(U, :, :, :, id, jd), basis[:,:,:,id,jd], dof, dofmap)
+            fill_dofvalues!(view(U, :, :, :, id, jd), basis[:,:,:,id,jd], dofs, dofmap)
         end
     end
 
