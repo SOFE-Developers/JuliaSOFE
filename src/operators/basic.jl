@@ -40,6 +40,10 @@ type id <: ScalarOperator end
 type Id <: VectorOperator end
 type ID <: MatrixOperator end
 
+Base.show(io::IO, ::Type{id}) = print(io, "id")
+Base.show(io::IO, ::Type{Id}) = print(io, "Id")
+Base.show(io::IO, ::Type{ID}) = print(io, "ID")
+
 function evaluate{T<:AbstractFloat}(::Type{id}, points::AbstractArray{T,2}, fes::FESpace)
     basis = evalBasis(element(fes), points, 0)
     @assert ndims(basis) == 3 && size(basis, 3) == 1 # nB x nP x 1
@@ -64,6 +68,10 @@ end
 type grad <: ScalarOperator end
 type Grad <: VectorOperator end
 type GRAD <: MatrixOperator end
+
+Base.show(io::IO, ::Type{grad}) = print(io, "grad")
+Base.show(io::IO, ::Type{Grad}) = print(io, "Grad")
+Base.show(io::IO, ::Type{GRAD}) = print(io, "GRAD")
 
 function evaluate{T<:AbstractFloat}(::Type{Grad}, points::AbstractArray{T,2}, fes::FESpace)
     dBasis = evalBasis(element(fes), points, 1)
@@ -100,6 +108,10 @@ end
 type div <: ScalarOperator end
 type Div <: VectorOperator end
 type DIV <: MatrixOperator end
+
+Base.show(io::IO, ::Type{div}) = print(io, "div")
+Base.show(io::IO, ::Type{Div}) = print(io, "Div")
+Base.show(io::IO, ::Type{DIV}) = print(io, "DIV")
 
 function evaluate{T<:AbstractFloat}(::Type{div}, points::AbstractArray{T,2}, fes::FESpace)
     dBasis = evalBasis(element(fes), points, 1)

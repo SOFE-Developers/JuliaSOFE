@@ -9,7 +9,6 @@ typealias OP MatrixOperator
 typealias data Union{ScalarCoefficient, FunctionCoefficient}
 typealias Data Union{VectorCoefficient, FunctionCoefficient}
 typealias DATA Union{MatrixCoefficient, FunctionCoefficient}
-#typealias fdat FunctionCoefficient
 
 # Bilinear Operators
 # -------------------

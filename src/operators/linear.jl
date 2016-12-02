@@ -42,6 +42,9 @@ end
 
 # Associated Methods
 # -------------------
+Base.show{C<:AbstractCoefficient,V<:AbstractOperator}(io::IO, l::LinearForm{C,V}) =
+    print("LinearForm{", V, "}")
+
 testspace(l::LinearForm) = getfield(l, :testspace)
 coeff(l::LinearForm) = getfield(l, :coeff)
 

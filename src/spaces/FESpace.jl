@@ -95,7 +95,7 @@ freeDoF(fes::FESpace) = !fixedDoF(fes)
 
 """
 
-    dofMap(fes::FESpace, d::Integer)
+    dofMap(fes::FESpace, d::Integer, mask::AbstractVector)
 
   Return the degrees of freedom mapping that connects the global mesh
   entities of topological dimension `d` to the local reference element.
@@ -105,7 +105,7 @@ freeDoF(fes::FESpace) = !fixedDoF(fes)
   local basis function  on the reference element to the `k`-th global basis 
   function on the `j`-th element.
 
-  # Keyword Arguments
+  # Arguments
   * `d::Integer`: The topological dimension of the entities
                     for which to compute the dof map
   * `mask::Vector{T<:Integer}`: A mask marking specific entities
@@ -177,13 +177,13 @@ end
 
 """
 
-    dofIndices(fes::FESpace; kwargs...)
+    dofIndices(fes::FESpace, args...)
 
   Return the indices of the degrees of freedom for the finite
   element space `fes` associated with the mesh entities of 
   topological dimension `d`.
 
-  # Keyword Arguments
+  # Arguments
   * `d::Integer`: The topological dimension of the entities
                     for which to compute the dof indices
   * `mask::Vector{T<:Integer}`: A mask marking specific entities
@@ -196,13 +196,13 @@ end
 
 """
 
-    dofMask(fes::FESpace; kwargs...)
+    dofMask(fes::FESpace, args...)
 
   Return a boolean mask specifying the degrees of freedom
   for the finite element space `fes` associated with the 
   mesh entities of topological dimension `d`.
 
-  # Keyword Arguments
+  # Arguments
   * `d::Integer`: The topological dimension of the entities
                     for which to compute the dof mask
   * `mask::Vector{T<:Integer}`: A mask marking specific entities

@@ -14,36 +14,73 @@ typealias Float AbstractFloat
 
 abstract AbstractPDE
 
+typealias NullableBF Nullable{BilinearForm}
+typealias NullableLF Nullable{LinearForm}
+typealias None nothing
+typealias BF BilinearForm
+typealias LF LinearForm
 #----------#
 # Type PDE #
 #----------#
 type PDE{T<:AbstractPDE} <: AbstractPDE
-    lhs :: Array{BilinearForm,1}
-    rhs :: Array{LinearForm,1}
+    lhs :: Matrix{Vector{BF}}
+    rhs :: Vector{Vector{LF}}
+    trialspace :: Vector{AbstractFESpace}
+    testspace :: Vector{AbstractFESpace}
     solution :: Array{Float,1}
 end
 
-type GenericPDE <: AbstractPDE
-end
+# Generic PDE Type
+type GenericPDE <: AbstractPDE end
+Base.show(io::IO, ::Type{GenericPDE}) = print(io, "GenericPDE")
 
 # Outer Constructors
 # -------------------
-function PDE{T<:AbstractPDE,A<:BilinearForm,L<:LinearForm}(::Type{T},
-                                                           lhs::AbstractArray{A,1},
-                                                           rhs::AbstractArray{L,1})
-    return PDE{T}(lhs, rhs, [])
+function PDE{T<:AbstractPDE,B<:BilinearForm,L<:LinearForm}(::Type{T},
+                                                           lhs::Matrix{Vector{B}},
+                                                           rhs::Vector{Vector{L}})
+    neq = length(rhs); @assert size(lhs) == (neq, neq)
+    trial = Vector{AbstractFESpace}(neq)
+    test = Vector{AbstractFESpace}(neq)
+    for i = 1:neq
+        for j = 1:neq
+            if !isempty(lhs[i,j])
+                if !isdefined(trial, j)
+                    trial[j] = trialspace(lhs[i,j][1])
+                else
+                    for k = 1:length(lhs[i,j])
+                        @assert trial[j] === trialspace(lhs[i,j][k])
+                    end
+                end
+                if !isdefined(test, i)
+                    test[i] = testspace(lhs[i,j][1])
+                else
+                    for k = 1:length(lhs[i,j])
+                        @assert test[i] === testspace(lhs[i,j][k])
+                    end
+                    for k = 1:length(rhs[i])
+                        @assert test[i] === testspace(rhs[i][k])
+                    end
+                end
+            end
+        end
+    end
+    
+    return PDE{T}(lhs, rhs, trial, test, [])
 end
-PDE{T<:AbstractPDE}(::Type{T}, lhs::BilinearForm, rhs::LinearForm) = PDE([lhs], [rhs])
-PDE{A<:BilinearForm,L<:LinearForm}(lhs::AbstractArray{A,1}, rhs::AbstractArray{L,1}) = PDE(GenericPDE, lhs, rhs)
-PDE(lhs::BilinearForm, rhs::LinearForm) = PDE([lhs], [rhs])
+PDE{B<:BilinearForm, L<:LinearForm}(lhs::Matrix{Vector{B}}, rhs::Vector{Vector{L}}) = PDE(GenericPDE, lhs, rhs)
+PDE(lhs::BilinearForm, rhs::LinearForm) = PDE(reshape([[lhs]], 1, 1), [[rhs]])
+PDE{T<:AbstractPDE}(::Type{T}, lhs::BilinearForm, rhs::LinearForm) = PDE(T, reshape([[lhs]], 1, 1), [[rhs]])
 
 # Associated Methods
 # -------------------
+Base.show{T<:AbstractPDE}(io::IO, pde::PDE{T}) = print(io, "PDE{", T, "}")
+
 lhs(pde::AbstractPDE) = getfield(pde, :lhs)
 rhs(pde::AbstractPDE) = getfield(pde, :rhs)
 
-trialspace(pde::AbstractPDE) = MixedFESpace(map(trialspace, lhs(pde))...)
-testspace(pde::AbstractPDE) = MixedFESpace(map(testspace, lhs(pde))...)
+trialspace(pde::AbstractPDE, j::Integer) = getfield(pde, :trialspace)[j]
+testspace(pde::AbstractPDE, i::Integer) = getfield(pde, :testspace)[i]
 
 function solve(pde::AbstractPDE)
     assemble!(pde)
@@ -51,43 +88,50 @@ function solve(pde::AbstractPDE)
 end
 
 function assemble!(pde::AbstractPDE)
-    map(assemble!, pde.lhs)
-    # for operator in pde.lhs
-    #     assemble!(operator)
-    # end
+    neq = length(rhs(pde))
+    for i = 1:neq
+        for j = 1:neq
+            map(assemble!, lhs(pde)[i,j])
+        end
+        map(assemble!, rhs(pde)[i])
+    end
+end
 
-    map(assemble!, pde.rhs)
-    # for functional in pde.rhs
-    #     assemble!(functional)
-    # end
+function system(pde::AbstractPDE)
+    cumndofs_trial = [0, cumsum([nDoF(fes) for fes in pde.trialspace])...]
+    cumndofs_test = [0, cumsum([nDoF(fes) for fes in pde.testspace])...]
+
+    I = Int[]; J = Int[]; V = Float64[]
+    b = Float64[]
+
+    neq = length(rhs(pde))
+    for i = 1:neq
+        for j = 1:neq
+            for k = 1:length(lhs(pde)[i,j])
+                II, JJ, VV = findnz(matrix(lhs(pde)[i,j][k]))
+                I = vcat(I, cumndofs_test[i] + II)
+                J = vcat(J, cumndofs_trial[j] + JJ)
+                V = vcat(V, VV)
+            end
+        end
+        b = vcat(b, mapreduce(vector, +, rhs(pde)[i]))
+    end
+    A = sparse(I, J, V)
+
+    return A, b
 end
 
 function compute(pde::AbstractPDE)
-    free = freeDoF(trialspace(pde))
-    #w = interpolate(space(pde), shift(space(pde)))
-    w = vcat([interpolate(fes, shift(fes)) for fes in trialspace(pde)]...)
+    free = mapreduce(freeDoF, vcat, pde.trialspace)
+    w = vcat([interpolate(fes, shift(fes)) for fes in pde.trialspace]...)
     
     A, b = system(pde)
 
-    u = zeros(Float32, nDoF(trialspace(pde)))
+    u = zeros(Float32, mapreduce(nDoF, +, pde.trialspace))
     u[!free] = w[!free]
     u[free] = w[free] + A[free,free]\(b-A*w)[free]
 
     return u
-end
-
-function system(pde::AbstractPDE)
-    A = matrix(pde.lhs[1])
-    for k = 2:length(pde.lhs)
-        A += matrix(pde.lhs[k])
-    end
-
-    b = vector(pde.rhs[1])
-    for k = 2:length(pde.rhs)
-        b += vector(pde.rhs[k])
-    end
-
-    return A, b
 end
 
 end # of module Problems

@@ -46,6 +46,9 @@ end
 
 # Associated methods
 # -------------------
+Base.show{C<:AbsCoeff,U<:AbsOp,V<:AbsOp}(io::IO, a::BilinearForm{C,U,V}) =
+    print("BilinearForm{", U, ",", V, "}")
+
 trialspace(a::BilinearForm) = getfield(a, :trialspace)
 testspace(a::BilinearForm) = getfield(a, :testspace)
 coeff(a::BilinearForm) = getfield(a, :coeff)
