@@ -113,9 +113,10 @@ freeDoF(fes::FESpace) = !fixedDoF(fes)
 """
 function dofMap{T<:Integer}(fes::FESpace, d::Integer, mask::AbstractArray{T,1})
     dofs = generateDoFs(element(fes), mesh(fes), d)
-    ndof = nDoF(element(fes))
+    ndof = nDoF(element(fes), d)
 
-    M = zeros(T, sum(ndof), number(mesh(fes), d))
+    #M = zeros(T, sum(ndof), number(mesh(fes), d))
+    M = zeros(Int, sum(ndof), number(mesh(fes), d))
 
     rb = 0
     for dd = 0:d-1
@@ -244,7 +245,7 @@ interpolate(fes::FESpace, f::Function) = interpolate(fes.mesh, fes.element, f)
 function evaluate{T<:Float,S<:Float}(fes::FESpace, dof::AbstractVector{S},
                                      points::AbstractArray{T,2}, deriv::Integer=0)
     nP, dimP = size(points)
-    dofmap = dofMap(fes, d=dimP)
+    dofmap = dofMap(fes, dimP)
     nB, nE = size(dofmap)
     basis = evalBasis(element(fes), points, deriv)
     nB, nP, nC, nD = size(basis, 1:4...)

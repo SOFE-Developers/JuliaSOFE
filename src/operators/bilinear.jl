@@ -56,7 +56,7 @@ coeff(a::BilinearForm) = getfield(a, :coeff)
 
   Return the discretized version of the bilinear operator `a`.
 """
-matrix(a::BilinearForm) = getfield(a, :matrix)
+matrix(a::BilinearForm) = get(getfield(a, :matrix))
 matrix!(a::BilinearForm, A::SparseMatrixCSC) = setfield!(a, :matrix, Nullable{SparseMatrixCSC}(A))
 
 function evaluate{C<:AbsCoeff,U<:AbsOp,V<:AbsOp}(a::BilinearForm{C,U,V}, d::Integer)

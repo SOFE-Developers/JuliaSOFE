@@ -51,7 +51,7 @@ coeff(l::LinearForm) = getfield(l, :coeff)
 
   Return the discretized version of the linear operator `l`.
 """
-vector{T<:LinearForm}(l::T) = getfield(l, :vector)
+vector{T<:LinearForm}(l::T) = get(getfield(l, :vector))
 vector!{T<:LinearForm}(l::T, L::Vector) = setfield!(l, :vector, Nullable{Vector}(L))
 
 function evaluate{C<:AbstractCoefficient,V<:AbstractOperator}(l::LinearForm{C,V}, d::Integer)
