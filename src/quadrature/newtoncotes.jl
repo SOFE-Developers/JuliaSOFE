@@ -1,5 +1,7 @@
 using Jacobi
 
+using ..Helpers
+
 #-------------------------#
 # Newton Cotes Quadrature #
 #-------------------------#
@@ -8,4 +10,8 @@ end
 
 function NewtonCotesQuadOrth(order::Integer, dim::Integer)
     
+end
+
+function newtoncotesquadorth(order::Integer, dim::Integer)
+    nodes = lagrangeNodesQ(dim, order, sorted=true)
 end
