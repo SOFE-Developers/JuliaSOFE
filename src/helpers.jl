@@ -1,7 +1,7 @@
 module Helpers
 
 export dimension
-export tensorprod, lagrangeNodesP, ndarray
+export tensorprod, lagrangeNodesP, lagrangeNodesQ, ndarray
 
 function dimension
 end
@@ -11,21 +11,21 @@ function tensorprod{T}(gridx::AbstractArray{T,1})
 end
 
 function tensorprod{T}(gridx::AbstractArray{T,1}, gridy::AbstractArray{T,1})
-    return hcat([i for i in gridx for j in gridy],
-                [j for i in gridx for j in gridy])
+    return hcat([j for i in gridx for j in gridy],
+                [i for i in gridx for j in gridy])
 end
 
 function tensorprod{T}(gridx::AbstractArray{T,1}, gridy::AbstractArray{T,1}, gridz::AbstractArray{T,1})
-    return hcat([i for i in gridx for j in gridy for k in gridz],
+    return hcat([k for i in gridx for j in gridy for k in gridz],
                 [j for i in gridx for j in gridy for k in gridz],
-                [k for i in gridx for j in gridy for k in gridz])
+                [i for i in gridx for j in gridy for k in gridz])
 end
 
 """
 Return the interpolation nodes for the lagrange Pp element
 of dimension `d` and polynomial order `p`.
 """
-function lagrangeNodesP(d::Integer, p::Integer)
+function lagrangeNodesP(d::Integer, p::Integer; sorted::Bool=false)
     @assert d in (1, 2, 3)
     @assert p >= 0
 
@@ -70,7 +70,71 @@ function lagrangeNodesP(d::Integer, p::Integer)
             nodes = vcat(v, e, i)
         end
     end
+
+    if sorted
+        nodes = sortrows(nodes, by=reverse, lt=lexless)
+    end
+
+    return nodes
 end
+
+function lagrangeNodesQ(d::Integer, p::Integer; sorted::Bool=false)
+    @assert d in (1, 2, 3)
+    @assert p >= 0
+
+    if p == 0
+        nodes = 0.5 * ones(1,d)
+    else
+        ls = linspace(0, 1, p+1)
+        ls = vcat(ls[1], ls[end], ls[2:end-1])
+        
+        if d == 1
+            nodes = ls''
+        elseif d == 2
+            # 4 vertex nodes
+            vs = ls[1:2]
+            v = tensorprod(vs, vs)
+
+            # 4(p-1) edge nodes
+            es = ls[3:end]
+            zs = zeros(es)
+            os = ones(es)
+            e = vcat(hcat(es, zs),
+                     hcat(zs, es),
+                     hcat(os, es),
+                     hcat(es, os))
+
+            # (p-1)(p-1) interior nodes
+            i = tensorprod(es, es)
+
+            nodes = vcat(v, e, i)
+        elseif d == 3
+            # 8 vertex nodes
+            vs = ls[1:2]
+            v = tensorprod(vs, vs, vs)
+
+            # 12(p-1) edge nodes
+            es = ls[3:end]
+            zs = zeros(es)
+            os = ones(es)
+            e = vcat(hcat(es, zs, zs), hcat(zs, es, zs), hcat(zs, zs, es),
+                     hcat(os, es, zs), hcat(os, zs, es), hcat(es, os, zs),
+                     hcat(zs, os, es), hcat(os, os, es), hcat(es, zs, os),
+                     hcat(zs, es, os), hcat(os, es, os), hcat(es, os, os))
+
+            # (p-1)(p-1)(p-1) interior nodes
+            i = tensorprod(es, es, es)
+
+            nodes = vcat(v, e, i)
+        end
+    end
+
+    if sorted
+        nodes = sortrows(nodes, by=reverse, lt=lexless)
+    end
+    
+    return nodes
+end    
 
 #function ndarray{T<:Real}(A::AbstractArray{AbstractArray{T}})
 function ndarray{T<:AbstractArray}(A::AbstractArray{T})
