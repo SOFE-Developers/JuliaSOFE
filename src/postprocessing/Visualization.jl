@@ -4,7 +4,6 @@ using PyCall
 
 using ..Elements
 using ..Meshes
-using ..MeshGeneration
 using ..Spaces
 
 export plot

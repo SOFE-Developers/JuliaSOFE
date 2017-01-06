@@ -2,10 +2,9 @@ __precompile__()
 
 module Elements
 
-import ..Helpers: dimension
+import CMesh: dimension
 
 export AbstractElement, PElement, QElement, Element
-export LagrangeP1, LagrangeQ1
 export dimension, order, nBasis, nVertices, dofTuple, nDoF, evalBasis, isnodal
 export issimp, isorth
 

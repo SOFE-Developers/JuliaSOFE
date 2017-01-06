@@ -1,7 +1,8 @@
 
+using CMesh: Mesh, nodes, topology, entities
 using CMesh.Topology: Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron
 
-using .Elements
+using ..Elements
 
 export evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
 
