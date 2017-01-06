@@ -1,12 +1,10 @@
-__precompile__()
-
 module Spaces
 
 import ..Elements: nDoF
-import ..Meshes: evaluate
+#import ..Meshes: evaluate
 
 using ..Elements
-using ..Meshes
+using ..CMesh: Meshes
 
 export AbstractFESpace, FESpace, MixedFESpace
 export mesh, element, domain, domain!, shift, shift!
