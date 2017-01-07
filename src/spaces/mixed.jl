@@ -1,5 +1,5 @@
 export MixedFESpace
-export subspaces, sub, subspace, add, addspace
+export subspaces, subspace, add, addspace
 
 #-------------------#
 # Type MixedFESpace #
@@ -21,12 +21,11 @@ subspaces(mfes::MixedFESpace) = getfield(mfes, :subspaces)
 
 """
 
-    sub(mfes::MixedFESpace, i::Integer)
+    subspace(mfes::MixedFESpace, i::Integer)
 
   Return the `i`th subspace of the mixed finite element space.
 """
-sub(mfes::MixedFESpace, i::Integer) = subspaces(mfes)[i]
-subspace(mfes::MixedFESpace, i::Integer) = sub(mfes, i)
+subspace(mfes::MixedFESpace, i::Integer) = subspaces(mfes)[i]
 
 """
 

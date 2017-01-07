@@ -2,8 +2,10 @@ module Visualization
 
 using PyCall
 
+using CMesh
+import CMesh: plot
+
 using ..Elements
-using ..Meshes
 using ..Spaces
 
 export plot
@@ -38,30 +40,6 @@ function visgrid(m::Mesh, refgrid::Mesh)
     viscells = reshape(viscells, (nE_ref*nE_vis,nV))
 
     return Mesh(visnodes, viscells)
-end
-
-function plot(m::Mesh)
-    D = Meshes.dimension(m)
-    
-    if D == 1
-        x = nodes(m)[:,1]; y = zeros(x)
-
-        pyvisofe[:plot](x, y)
-    elseif D == 2
-        n = nodes(m)
-        x = n[:,1]; y = n[:,2]
-        faces = entities(m, 2) - 1
-        
-        pyvisofe[:triplot](x, y, faces)
-    elseif D == 3
-        n = nodes(m)
-        x = n[:,1]; y = n[:,2]; z = n[:,3]
-        faces = entities(m, 2) - 1
-
-        pyvisofe[:wireframe](x, y, z, faces)
-    else
-        error("Invalid mesh dimension! ($D)")
-    end
 end
 
 function plot(el::Element, i::Integer; resolution::Integer=100,

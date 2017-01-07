@@ -4,15 +4,21 @@ using CMesh.Topology: Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron
 
 using ..Elements
 
-export evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
+export element, evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
 
 typealias Float AbstractFloat
 
-refelem(m::Mesh{Segment})       = LagrangeP1(1)
-refelem(m::Mesh{Triangle})      = LagrangeP1(2)
-refelem(m::Mesh{Tetrahedron})   = LagrangeP1(3)
-refelem(m::Mesh{Quadrilateral}) = LagrangeQ1(2)
-refelem(m::Mesh{Hexahedron})    = LagrangeQ1(3)
+"""
+
+    element(m::Mesh)
+
+Return a shape element for the mesh.
+"""
+element(m::Mesh{Segment})       = LagrangeP1(1)
+element(m::Mesh{Triangle})      = LagrangeP1(2)
+element(m::Mesh{Tetrahedron})   = LagrangeP1(3)
+element(m::Mesh{Quadrilateral}) = LagrangeQ1(2)
+element(m::Mesh{Hexahedron})    = LagrangeQ1(3)
 
 """
 
@@ -28,7 +34,7 @@ function evalReferenceMaps{T<:Float}(m::Mesh, points::AbstractArray{T,2}, deriv:
     nW = size(coords, 2)
 
     #basis = evalBasis(m.element, points, deriv)
-    basis = evalBasis(refelem(m), points, deriv)
+    basis = evalBasis(element(m), points, deriv)
     nB, nP, nC, nD, nDD = size(basis, 1:5...)
     @assert nC == 1 "nC = $nC == 1"
     
