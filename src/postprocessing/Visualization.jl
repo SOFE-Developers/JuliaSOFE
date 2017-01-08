@@ -6,6 +6,7 @@ using CMesh
 import CMesh: plot
 
 using ..Elements
+using ..CMeshExtensions
 using ..Spaces
 
 export plot
