@@ -49,17 +49,17 @@ function PDE{T<:AbstractPDE,B<:BilinearForm,L<:LinearForm}(::Type{T},
                     trial[j] = trialspace(lhs[i,j][1])
                 else
                     for k = 1:length(lhs[i,j])
-                        @assert trial[j] === trialspace(lhs[i,j][k])
+                        @assert is(trial[j], trialspace(lhs[i,j][k]))
                     end
                 end
                 if !isdefined(test, i)
                     test[i] = testspace(lhs[i,j][1])
                 else
                     for k = 1:length(lhs[i,j])
-                        @assert test[i] === testspace(lhs[i,j][k])
+                        @assert is(test[i], testspace(lhs[i,j][k]))
                     end
                     for k = 1:length(rhs[i])
-                        @assert test[i] === testspace(rhs[i][k])
+                        @assert is(test[i], testspace(rhs[i][k]))
                     end
                 end
             end
