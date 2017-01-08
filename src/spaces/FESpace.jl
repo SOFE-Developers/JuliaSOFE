@@ -1,10 +1,11 @@
 module Spaces
 
-import ..Elements: nDoF
-import ..CMeshExtensions: evaluate
+using CMesh.Meshes
 
 using ..Elements
-using ..Meshes
+
+import ..Elements: nDoF
+import ..CMeshExtensions: evaluate
 
 export AbstractFESpace, FESpace, MixedFESpace
 export mesh, element, domain, domain!, shift, shift!

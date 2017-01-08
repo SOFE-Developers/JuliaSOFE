@@ -1,6 +1,6 @@
 using FastGaussQuadrature
 
-using ..Helpers
+using CMesh.Utils: tensorprod
 
 export GaussQuadOrth, GaussQuadSimp
 export gaussquadorth, gaussquadsimp

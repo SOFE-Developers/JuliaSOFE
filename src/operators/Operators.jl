@@ -2,8 +2,9 @@ __precompile__()
 
 module Operators
 
+using CMesh.Meshes
+using ..CMeshExtensions
 using ..Elements
-using ..Meshes
 using ..Spaces
 using ..Quadrature
 using ..Helpers

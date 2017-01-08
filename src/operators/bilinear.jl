@@ -20,9 +20,9 @@ end
 # -------------------
 function BilinearForm{U<:AbsOp,V<:AbsOp,C<:AbsCoeff}(::Type{U}, ::Type{V}, fes::FESpace, coeff::C)
     if issimp(element(fes))
-        qrule = QuadRuleSimp2()
+        qrule = GaussQuadSimp(2*order(fes.element), dimension(fes.mesh))
     else
-        error("Currently only simplical elements supported...")
+        qrule = GaussQuadOrth(2*order(fes.element), dimension(fes.mesh))
     end
     mat = Nullable{SparseMatrixCSC}()
     return BilinearForm{C,U,V}(fes, fes, coeff, qrule, mat)
@@ -63,7 +63,7 @@ matrix(a::BilinearForm) = get(getfield(a, :matrix))
 matrix!(a::BilinearForm, A::SparseMatrixCSC) = setfield!(a, :matrix, Nullable{SparseMatrixCSC}(A))
 
 function evaluate{C<:AbsCoeff,U<:AbsOp,V<:AbsOp}(a::BilinearForm{C,U,V}, d::Integer)
-    points = qpoints(a.quadrule, d)
+    points = qnodes(a.quadrule, d)
     
     c = evaluate(coeff(a), points, mesh(trialspace(a)))
     u = evaluate(U, points, trialspace(a))

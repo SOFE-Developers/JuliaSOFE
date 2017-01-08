@@ -16,9 +16,9 @@ end
 # -------------------
 function LinearForm{C<:AbstractCoefficient,V<:AbstractOperator}(::Type{V}, fes::FESpace, coeff::C)
     if issimp(element(fes))
-        qrule = QuadRuleSimp2()
+        qrule = GaussQuadSimp(2*order(fes.element), dimension(fes.mesh))
     else
-        error("Currently only simplical elements supported...")
+        qrule = GaussQuadOrth(2*order(fes.element), dimension(fes.mesh))
     end
     vec = Nullable{Vector}()
     return LinearForm{C,V}(fes, coeff, qrule, vec)
@@ -58,7 +58,7 @@ vector{T<:LinearForm}(l::T) = get(getfield(l, :vector))
 vector!{T<:LinearForm}(l::T, L::Vector) = setfield!(l, :vector, Nullable{Vector}(L))
 
 function evaluate{C<:AbstractCoefficient,V<:AbstractOperator}(l::LinearForm{C,V}, d::Integer)
-    points = qpoints(l.quadrule, d)
+    points = qnodes(l.quadrule, d)
 
     c = evaluate(coeff(l), points, mesh(testspace(l)))
     v = evaluate(V, points, testspace(l))
