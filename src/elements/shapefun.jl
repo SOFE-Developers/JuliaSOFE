@@ -52,7 +52,7 @@ end
 
 """
 
-    poly_dlobatto(k::Integer, n::Integer)
+    poly_dlobatto(k::Integer, n::Integer=1)
 
 Return the `n`-th derivative of the `k`-th Lobatto polynomial
 """
@@ -64,7 +64,7 @@ Return the `n`-th derivative of the `k`-th Lobatto polynomial
 
 # with ``J_k^{(n,n)}`` being the `k`-th order Jacobi polynomial.
 # """
-function poly_dlobatto(k::Integer, n::Integer)
+function poly_dlobatto(k::Integer, n::Integer=1)
     if k == 0 && n == 0
         return Poly([-0.5, 0.5])
     elseif k == 0 && n == 1

@@ -5,10 +5,9 @@ export P1, Q1
 #---------#
 type P1 <: PElement
 end
-P1(dim::Integer) = Element(P1, dim)
+P1(dim::Integer) = Element(P1, dim, 1)
 
 isnodal(::Element{P1}) = true
-order(::Element{P1}) = 1
 nBasis(el::Element{P1}) = tuple(2:(dimension(el)+1)...)
 dofTuple(el::Element{P1}) = (1, 0, 0, 0)[1:dimension(el)+1]
 
@@ -43,10 +42,9 @@ end
 #-----------------#
 type Q1 <: QElement
 end
-Q1(dim::Integer) = Element(Q1, dim)
+Q1(dim::Integer) = Element(Q1, dim, 1)
 
 isnodal(::Element{Q1}) = true
-order(::Element{Q1}) = 1
 nBasis(el::Element{Q1}) = tuple(2.^(1:dimension(el))...)
 dofTuple(el::Element{Q1}) = (1, 0, 0, 0)[1:dimension(el)+1]
 

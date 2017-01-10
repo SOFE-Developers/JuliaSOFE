@@ -22,11 +22,12 @@ typealias Float AbstractFloat
 #--------------#
 type Element{T<:ElementTypes} <: AbstractElement{T}
     dimension :: Int
+    order :: Int
 end
 
 # Outer Constructors
 # -------------------
-Element{T<:ElementTypes}(::Type{T}, dim::Integer) = Element{T}(dim)
+Element{T<:ElementTypes}(::Type{T}, dim::Integer, order::Integer) = Element{T}(dim, order)
 
 # Associated methods
 # -------------------
@@ -38,19 +39,18 @@ Element{T<:ElementTypes}(::Type{T}, dim::Integer) = Element{T}(dim)
 """
 dimension(el::Element) = getfield(el, :dimension)
 
-issimp{T<:PElement}(::AbstractElement{T}) = true
-issimp{T<:QElement}(::AbstractElement{T}) = false
-isorth{T<:PElement}(::AbstractElement{T}) = false
-isorth{T<:QElement}(::AbstractElement{T}) = true
-
 """
 
     order(el::AbstractElement)
 
   The polynomial order of the element's basis (shape) functions.
 """
-function order(el::AbstractElement)
-end
+order(el::Element) = getfield(el, :order)
+
+issimp{T<:PElement}(::AbstractElement{T}) = true
+issimp{T<:QElement}(::AbstractElement{T}) = false
+isorth{T<:PElement}(::AbstractElement{T}) = false
+isorth{T<:QElement}(::AbstractElement{T}) = true
 
 """
 
@@ -75,7 +75,7 @@ nVertices{T<:QElement}(el::AbstractElement{T}) = tuple(2.^(1:dimension(el))...)
 nDoF(el::AbstractElement) = nDoF(el, dimension(el))
 function nDoF{T<:PElement}(el::AbstractElement{T}, d::Integer)
     #return map(*, dofTuple(el), binomial(dimension(el)+1, k) for k = 1:dimension(el)+1)
-    return map(*, dofTuple(el), binomial(d+1, k) for k = 1:d+1)
+    return map(*, dofTuple(el)[1:d+1], binomial(d+1, k) for k = 1:d+1)
 end
 function nDoF{T<:QElement}(el::AbstractElement{T})
     if dimension(el) == 1

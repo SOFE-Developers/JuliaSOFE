@@ -58,7 +58,7 @@ function fill_dofMap!{T<:Integer}(M::AbstractArray{T,2}, dofs::AbstractArray{T,2
 end
 
 function generateDoFs{T<:AbstractElement}(elem::T, mesh::Mesh, d::Integer)
-    doftuple = dofTuple(elem)
+    doftuple = dofTuple(elem)[1:d+1]
     nentities = [number(mesh, dd) for dd = 0:d]
     ndofs = map(*, doftuple, nentities)
     dofrange = [1, 1 + cumsum(ndofs)...]
