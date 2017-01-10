@@ -117,9 +117,12 @@ function evalBasis{T<:AbstractFloat}(el::Element,
     end
 end
 
-include("lagrange.jl")
 include("vector.jl")
 include("mixed.jl")
+
+include("lagrange.jl")
+
+include("hierarchic.jl")
 
 end # of module Elements
 
