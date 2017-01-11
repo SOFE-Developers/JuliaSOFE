@@ -123,7 +123,8 @@ end
 
 function compute(pde::AbstractPDE)
     free = mapreduce(freeDoF, vcat, pde.trialspace)
-    w = vcat([interpolate(fes, shift(fes)) for fes in pde.trialspace]...)
+    # w = vcat([interpolate(fes, shift(fes)) for fes in pde.trialspace]...)
+    w = vcat([project(fes, shift(fes)) for fes in pde.trialspace]...)
     
     A, b = system(pde)
 
