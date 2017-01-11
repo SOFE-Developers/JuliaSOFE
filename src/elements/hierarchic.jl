@@ -51,6 +51,18 @@ function evalD0Basis!{T<:Real}(el::Element{PpH}, points::AbstractArray{T,2}, out
                 out[off,ip,1] = l1 * l3 * poly_lobatto_kernel(k)(l3 - l1); off += 1
                 out[off,ip,1] = l2 * l3 * poly_lobatto_kernel(k)(l3 - l2); off += 1
             end
+            # # edge 1
+            # for k = 0:p-2
+            #     out[off,ip,1] = l1 * l2 * poly_lobatto_kernel(k)(l2 - l1); off += 1
+            # end
+            # # edge 2
+            # for k = 0:p-2
+            #     out[off,ip,1] = l1 * l3 * poly_lobatto_kernel(k)(l3 - l1); off += 1
+            # end
+            # # edge 3
+            # for k = 0:p-2
+            #     out[off,ip,1] = l2 * l3 * poly_lobatto_kernel(k)(l3 - l2); off += 1
+            # end
             # interior functions (1 <= n1,n2; n1+n2 <= pi-1)
             for i = 3:p
                 for j = 0:i-3
@@ -96,7 +108,7 @@ function evalD1Basis!{T<:Real}(el::Element{PpH}, points::AbstractArray{T,2}, out
     if nD == 1
         for ip = 1:nP
             for k = 1:p+1
-                out[k,ip,1,1] = 2 * poly_dlobatto(k-1)(points[ip,1])
+                out[k,ip,1,1] = 2 * poly_dlobatto(k-1)(2*points[ip,1] - 1)
             end
         end
     elseif nD == 2

@@ -128,7 +128,7 @@ function compute(pde::AbstractPDE)
     
     A, b = system(pde)
 
-    u = zeros(Float32, mapreduce(nDoF, +, pde.trialspace))
+    u = zeros(Float64, mapreduce(nDoF, +, pde.trialspace))
     u[!free] = w[!free]
     u[free] = w[free] + A[free,free]\(b-A*w)[free]
 

@@ -40,7 +40,7 @@ function poly_lobatto(k::Integer)
     k < 0 && error("Polynomial order has to be non-negative (", k, ")")
 
     if k == 0
-        return Poly([-0.5, 0.5])
+        return Poly([0.5, -0.5])
     elseif k == 1
         return Poly([0.5, 0.5])
     else
@@ -66,7 +66,7 @@ Return the `n`-th derivative of the `k`-th Lobatto polynomial
 # """
 function poly_dlobatto(k::Integer, n::Integer=1)
     if k == 0 && n == 0
-        return Poly([-0.5, 0.5])
+        return Poly([0.5, -0.5])
     elseif k == 0 && n == 1
         return Poly([-0.5])
     elseif k == 1 && n == 0
@@ -111,6 +111,6 @@ Return the `k`-th Lobatto kernel polynomial.
 # """
 function poly_lobatto_kernel(k::Integer)
     p = poly_lobatto(k+2)
-    q = Poly([-0.25, 0.0, 0.25])
+    q = Poly([0.25, 0.0, -0.25])
     return div(p, q)
 end
