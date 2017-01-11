@@ -3,6 +3,7 @@ module Spaces
 using CMesh.Meshes
 
 using ..Elements
+using ..CMeshExtensions: evalJacobianDeterminat
 
 import ..Elements: nDoF
 
@@ -78,7 +79,7 @@ include("interpolation.jl")
 
 # Projection
 # -----------
-# include("projection.jl")
+include("projection.jl")
 
 # Evaluation
 # -----------

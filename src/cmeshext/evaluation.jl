@@ -1,3 +1,5 @@
+using CMesh.Utils: ndarray
+
 export evaluate
 
 typealias Constant{T<:Real} Union{T, AbstractVector{T}, AbstractMatrix{T}}

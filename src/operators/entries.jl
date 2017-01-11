@@ -2,25 +2,25 @@
 # Computing Entries #
 #-------------------#
 
-typealias op ScalarOperator
-typealias Op VectorOperator
-typealias OP MatrixOperator
+# typealias op ScalarOperator
+# typealias Op VectorOperator
+# typealias OP MatrixOperator
 
-typealias data Union{ScalarCoefficient, FunctionCoefficient}
-typealias Data Union{VectorCoefficient, FunctionCoefficient}
-typealias DATA Union{MatrixCoefficient, FunctionCoefficient}
+# typealias data Union{ScalarCoefficient, FunctionCoefficient}
+# typealias Data Union{VectorCoefficient, FunctionCoefficient}
+# typealias DATA Union{MatrixCoefficient, FunctionCoefficient}
 
 # Bilinear Operators
 # -------------------
 
 # scalar coeff * scalar oper (local) * scalar oper (local)
-function fill_entries!{T<:Real,Tc<:data,Tu<:op,Tv<:op}(::BilinearForm{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3}, # nE x nBi x nBj
-                                                       C::AbstractArray{T,2}, # nE x nP
-                                                       U::AbstractArray{T,3}, # nBj x nP x nC
-                                                       V::AbstractArray{T,3}, # nBi x nP x nC
-                                                       w::AbstractArray{T,1}, # nP
-                                                       D::AbstractArray{T,2}) # nE x nP
+# function fill_entries!{T<:Real,Tc<:data,Tu<:op,Tv<:op}(::BilinearForm{Tc,Tu,Tv},
+function fill_entries!{T<:Real}(E::AbstractArray{T,3}, # nE x nBi x nBj
+                                C::AbstractArray{T,2}, # nE x nP
+                                U::AbstractArray{T,3}, # nBj x nP x nC
+                                V::AbstractArray{T,3}, # nBi x nP x nC
+                                w::AbstractArray{T,1}, # nP
+                                D::AbstractArray{T,2}) # nE x nP
     nE, nBi, nBj = size(E)
     nBj, nP, nC = size(U); @assert nC == 1
     nBi, nP, nC = size(V); @assert nC == 1
@@ -39,13 +39,13 @@ function fill_entries!{T<:Real,Tc<:data,Tu<:op,Tv<:op}(::BilinearForm{Tc,Tu,Tv},
 end
 
 # scalar coeff * vector oper (global) * vector oper (global)
-function fill_entries!{T<:Real,Tc<:data,Tu<:Op,Tv<:Op}(::BilinearForm{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3}, # nE x nBi x nBj
-                                                       C::AbstractArray{T,2}, # nE x nP
-                                                       U::AbstractArray{T,4}, # nE x nBj x nP x nC
-                                                       V::AbstractArray{T,4}, # nE x nBi x nP x nC
-                                                       w::AbstractArray{T,1}, # nP
-                                                       D::AbstractArray{T,2}) # nE x nP
+# function fill_entries!{T<:Real,Tc<:data,Tu<:Op,Tv<:Op}(::BilinearForm{Tc,Tu,Tv},
+function fill_entries!{T<:Real}(E::AbstractArray{T,3}, # nE x nBi x nBj
+                                C::AbstractArray{T,2}, # nE x nP
+                                U::AbstractArray{T,4}, # nE x nBj x nP x nC
+                                V::AbstractArray{T,4}, # nE x nBi x nP x nC
+                                w::AbstractArray{T,1}, # nP
+                                D::AbstractArray{T,2}) # nE x nP
     nE, nBi, nBj = size(E)
     nE, nB, nP, nC = size(U)
 
@@ -64,13 +64,13 @@ function fill_entries!{T<:Real,Tc<:data,Tu<:Op,Tv<:Op}(::BilinearForm{Tc,Tu,Tv},
 end
 
 # vector coeff * vector oper (global) * scalar oper (local)
-function fill_entries!{T<:Real,Tc<:Data,Tu<:Op,Tv<:op}(::BilinearForm{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3}, # nE x nBi x nBj
-                                                       C::AbstractArray{T,3}, # nE x nP x nD
-                                                       U::AbstractArray{T,4}, # nE x nBj x nP x nD
-                                                       V::AbstractArray{T,2}, # nBi x nP
-                                                       w::AbstractArray{T,1}, # nP
-                                                       D::AbstractArray{T,2}) # nE x nP
+# function fill_entries!{T<:Real,Tc<:Data,Tu<:Op,Tv<:op}(::BilinearForm{Tc,Tu,Tv},
+function fill_entries!{T<:Real}(E::AbstractArray{T,3}, # nE x nBi x nBj
+                                C::AbstractArray{T,3}, # nE x nP x nD
+                                U::AbstractArray{T,4}, # nE x nBj x nP x nD
+                                V::AbstractArray{T,2}, # nBi x nP
+                                w::AbstractArray{T,1}, # nP
+                                D::AbstractArray{T,2}) # nE x nP
     nE, nBi, nBj = size(E)
     nE, nB, nP, nW = size(U)
     for jb = 1:nBj
@@ -88,13 +88,13 @@ function fill_entries!{T<:Real,Tc<:Data,Tu<:Op,Tv<:op}(::BilinearForm{Tc,Tu,Tv},
 end
 
 # matrix coeff * vector oper (global) * vector oper (global)
-function fill_entries!{T<:Real,Tc<:DATA,Tu<:Op,Tv<:Op}(::BilinearForm{Tc,Tu,Tv},
-                                                       E::AbstractArray{T,3}, # nE x nBi x nBj
-                                                       C::AbstractArray{T,4}, # nE x nP x nCi x nCj
-                                                       U::AbstractArray{T,4}, # nE x nBj x nP x nCj
-                                                       V::AbstractArray{T,4}, # nE x nBi x nP x nCi
-                                                       w::AbstractArray{T,1}, # nP
-                                                       D::AbstractArray{T,2}) # nE x nP
+# function fill_entries!{T<:Real,Tc<:DATA,Tu<:Op,Tv<:Op}(::BilinearForm{Tc,Tu,Tv},
+function fill_entries!{T<:Real}(E::AbstractArray{T,3}, # nE x nBi x nBj
+                                C::AbstractArray{T,4}, # nE x nP x nCi x nCj
+                                U::AbstractArray{T,4}, # nE x nBj x nP x nCj
+                                V::AbstractArray{T,4}, # nE x nBi x nP x nCi
+                                w::AbstractArray{T,1}, # nP
+                                D::AbstractArray{T,2}) # nE x nP
     nE, nBi, nBj = size(E)
     nE, nP, nCi, nCj = size(C)
     nE, nB, nP, nCj = size(U)
@@ -119,12 +119,12 @@ end
 # -----------------
 
 # scalar coeff * scalar operator (local)
-function fill_entries!{T<:Real,Tc<:data,Tv<:op}(::LinearForm{Tc,Tv},
-                                                E::AbstractArray{T,2}, # nE x nB
-                                                C::AbstractArray{T,2}, # nE x nP
-                                                V::AbstractArray{T,3}, # nB x nP x nC
-                                                w::AbstractArray{T,1}, # nP
-                                                D::AbstractArray{T,2}) # nE x nP
+# function fill_entries!{T<:Real,Tc<:data,Tv<:op}(::LinearForm{Tc,Tv},
+function fill_entries!{T<:Real}(E::AbstractArray{T,2}, # nE x nB
+                                C::AbstractArray{T,2}, # nE x nP
+                                V::AbstractArray{T,3}, # nB x nP x nC
+                                w::AbstractArray{T,1}, # nP
+                                D::AbstractArray{T,2}) # nE x nP
     nE, nB = size(E)
     nB, nP, nC = size(V); @assert nC == 1
     for ib = 1:nB
@@ -139,12 +139,12 @@ function fill_entries!{T<:Real,Tc<:data,Tv<:op}(::LinearForm{Tc,Tv},
 end
 
 # vector coeff * vector operator (local)
-function fill_entries!{T<:Real,Tc<:Data,Tv<:Op}(::LinearForm{Tc,Tv},
-                                                E::AbstractArray{T,2}, # nE x nB
-                                                C::AbstractArray{T,3}, # nE x nP x nC
-                                                V::AbstractArray{T,3}, # nB x nP x nC
-                                                w::AbstractArray{T,1}, # nP
-                                                D::AbstractArray{T,2}) # nE x nP
+# function fill_entries!{T<:Real,Tc<:Data,Tv<:Op}(::LinearForm{Tc,Tv},
+function fill_entries!{T<:Real}(E::AbstractArray{T,2}, # nE x nB
+                                C::AbstractArray{T,3}, # nE x nP x nC
+                                V::AbstractArray{T,3}, # nB x nP x nC
+                                w::AbstractArray{T,1}, # nP
+                                D::AbstractArray{T,2}) # nE x nP
     nE, nB = size(E)
     nB, nP, nC = size(V)
     # nW, = size(C)
@@ -163,12 +163,12 @@ function fill_entries!{T<:Real,Tc<:Data,Tv<:Op}(::LinearForm{Tc,Tv},
 end
 
 # vector coeff * vector operator (global)
-function fill_entries!{T<:Real,Tc<:Data,Tv<:Op}(::LinearForm{Tc,Tv},
-                                                E::AbstractArray{T,2}, # nE x nB
-                                                C::AbstractArray{T,3}, # nE x nP x nC
-                                                V::AbstractArray{T,4}, # nE x nB x nP x nC
-                                                w::AbstractArray{T,1}, # nP
-                                                D::AbstractArray{T,2}) # nE x nP
+# function fill_entries!{T<:Real,Tc<:Data,Tv<:Op}(::LinearForm{Tc,Tv},
+function fill_entries!{T<:Real}(E::AbstractArray{T,2}, # nE x nB
+                                C::AbstractArray{T,3}, # nE x nP x nC
+                                V::AbstractArray{T,4}, # nE x nB x nP x nC
+                                w::AbstractArray{T,1}, # nP
+                                D::AbstractArray{T,2}) # nE x nP
     nE, nB = size(E)
     nE, nB, nP, nC = size(V)
     # nW, = size(C)

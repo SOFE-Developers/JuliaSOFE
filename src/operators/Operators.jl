@@ -61,7 +61,8 @@ function assemble(a::BilinearForm, d::Integer)
     Det = abs(evalJacobianDeterminat(mesh(fes), qpoints))
     
     entries = zeros(eltype(qpoints), nE, nB, nB)
-    fill_entries!(a, entries, C, U, V, qweights, Det)
+    # fill_entries!(a, entries, C, U, V, qweights, Det)
+    fill_entries!(entries, C, U, V, qweights, Det)
 
     A = sparse(dofI[:], dofJ[:], entries[:], ndof, ndof)
     return A
@@ -89,8 +90,9 @@ function assemble(l::LinearForm, d::Integer)
     Det = abs(evalJacobianDeterminat(mesh(fes), qpoints))
     
     entries = zeros(eltype(qpoints), nE, nB)
-    fill_entries!(l, entries, C, V, qweights, Det)
-
+    # fill_entries!(l, entries, C, V, qweights, Det)
+    fill_entries!(entries, C, V, qweights, Det)
+    
     L = sparsevec(dofI[:], entries[:], ndof)
     return full(L)
 end
