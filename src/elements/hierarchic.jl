@@ -61,7 +61,29 @@ function evalD0Basis!{T<:Real}(el::Element{PpH}, points::AbstractArray{T,2}, out
             end
         end
     elseif nD == 3
-        error("Not implemented, yet!")
+        for ip = 1:nP
+            # barycentric coordinates
+            l1 = one(T) - (points[ip,1] + points[ip,2] + points[ip,3])
+            l2 = points[ip,1]; l3 = points[ip,2]; l4 = points[ip,3]
+            # vertex functions
+            off = 1
+            out[1,ip,1] = l1; off += 1
+            out[2,ip,1] = l2; off += 1
+            out[3,ip,1] = l3; off += 1
+            out[4,ip,1] = l4; off += 1
+            # edge functions
+            for k = 0:p-2
+                out[off,ip,1] = l1 * l2 * poly_lobatto_kernel(k)(l2 - l1); off += 1
+                out[off,ip,1] = l1 * l3 * poly_lobatto_kernel(k)(l3 - l1); off += 1
+                out[off,ip,1] = l1 * l4 * poly_lobatto_kernel(k)(l4 - l1); off += 1
+                out[off,ip,1] = l2 * l3 * poly_lobatto_kernel(k)(l3 - l2); off += 1
+                out[off,ip,1] = l2 * l4 * poly_lobatto_kernel(k)(l4 - l2); off += 1
+                out[off,ip,1] = l3 * l4 * poly_lobatto_kernel(k)(l4 - l3); off += 1
+            end
+            # face functions
+            
+            
+        end
     end
 
     return out
