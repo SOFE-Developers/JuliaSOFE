@@ -103,8 +103,8 @@ function fill_entries!{T<:Real}(E::AbstractArray{T,3}, # nE x nBi x nBj
         for ib = 1:nBi
             for ie = 1:nE
                 for ip = 1:nP
-                    for jc = 1:nC
-                        for ic = 1:nC
+                    for jc = 1:nCj
+                        for ic = 1:nCi
                             E[ie,ib,jb] += C[ie,ip,ic,jc] * U[ie,jb,ip,jc] * V[ie,ib,ip,ic] * w[ip] * D[ie,ip]
                         end
                     end

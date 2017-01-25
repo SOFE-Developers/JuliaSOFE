@@ -15,13 +15,14 @@ sdf = DUnion(sdfcs...)
 inside{T<:Real}(xs::AbstractArray{T,2}) = sdf(xs) .< zero(T)
 
 function a{T<:Real}(xs::AbstractArray{T,2})
-    A = zeros(T, size(xs, 1))
+    # A = zeros(T, size(xs, 1))
+    A = zeros(T, size(xs, 1), 2, 2)
     x = zeros(T, size(xs, 2))
     for ip = 1:size(xs,1)
         for id = 1:size(xs, 2)
             x[id] = xs[ip,id]
         end
-        A[ip] = sdf(x) < zero(T) ? convert(T, 100) : convert(T, 1)
+        A[ip,1,1] = A[ip,2,2] = sdf(x) < zero(T) ? convert(T, 100) : convert(T, 1)
     end
     return A
 end
