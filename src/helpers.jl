@@ -115,6 +115,26 @@ function lagrangeNodesQ(d::Integer, p::Integer; sorted::Bool=false)
     end
     
     return nodes
-end    
+end
+
+function ndomain(f::Function)
+    n = 0
+    while n < 10
+        try
+            x = rand(n)
+            y = f(x)
+            return n
+        catch
+            n += 1
+        end
+    end
+end
+
+function ncodomain(f::Function)
+    n = ndomain(f)
+    return size(f(rand(n)))
+end
+
+dims(f::Function) = (ndomain(f), ncodomain(f))
 
 end # of module Helpers
