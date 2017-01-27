@@ -1,5 +1,5 @@
 
-using CMesh: Mesh, nodes, topology, entities
+using CMesh: Mesh, nodes, topology, entities, iter, incidence!
 using CMesh.Topology: Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron
 
 using ..Elements
@@ -123,6 +123,36 @@ end
 #         end
 #     end
 # end
+
+function evalInverseMaps{T<:Real,S<:Integer}(m::Mesh{Triangle}, points::AbstractArray{T,2}, hosts::AbstractArray{S,1})
+    preimg = zeros(T, size(points, 1), dimension(topology(m)))
+    q = zeros(T, dimension(topology(m)))
+    
+    n = nodes(m)
+    M = zeros(T, size(points, 2), 2)
+    p = zeros(T, size(points, 2))
+    p0 = zeros(T, size(points, 2))
+    
+    it = iter(incidence!(topology(m), 2, 0))
+    
+    for ip = 1:size(points, 1)
+        e = it[hosts[ip]]
+        for id = 1:size(points, 2)
+            p[id] = points[ip,id]
+            p0[id] = n[e[1],id]
+            M[id,1] = n[e[2],id] - n[e[1],id]
+            M[id,2] = n[e[3],id] - n[e[1],id]
+        end
+
+        q = pinv(M) * (p - p0)
+
+        for id = 1:dimension(topology(m))
+            preimg[ip,id] = q[id]
+        end
+    end
+
+    return preimg
+end
 
 """
 
