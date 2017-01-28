@@ -1,6 +1,6 @@
 
 using CMesh: Mesh, nodes, topology, entities, iter, incidence!
-using CMesh.Topology: Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron
+using CMesh.Topology: AbstractSimplex, Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron
 
 using ..Elements
 
@@ -124,24 +124,35 @@ end
 #     end
 # end
 
-function evalInverseMaps{T<:Real,S<:Integer}(m::Mesh{Triangle}, points::AbstractArray{T,2}, hosts::AbstractArray{S,1})
+"""
+
+    evalInverseMaps{E<:AbstractSimplex,T<:Real,S<:Integer}(m::Mesh{E}, points::AbstractArray{T,2}, hosts::AbstractArray{S,1})
+
+  Compute the preimage of each of the given (global) `points` by
+  evaluating the inverse of the reference map of the
+  corresponding mesh cell in `m` specified in `hosts`.
+"""
+function evalInverseMaps{E<:AbstractSimplex,T<:Real,S<:Integer}(m::Mesh{E}, points::AbstractArray{T,2}, hosts::AbstractVector{S})
+    @assert size(points, 2) >= dimension(topology(m))
+    
     preimg = zeros(T, size(points, 1), dimension(topology(m)))
     q = zeros(T, dimension(topology(m)))
     
     n = nodes(m)
-    M = zeros(T, size(points, 2), 2)
+    M = zeros(T, size(points, 2), dimension(topology(m)))
     p = zeros(T, size(points, 2))
     p0 = zeros(T, size(points, 2))
     
-    it = iter(incidence!(topology(m), 2, 0))
+    it = iter(incidence!(topology(m), dimension(topology(m)), 0))
     
     for ip = 1:size(points, 1)
         e = it[hosts[ip]]
         for id = 1:size(points, 2)
             p[id] = points[ip,id]
             p0[id] = n[e[1],id]
-            M[id,1] = n[e[2],id] - n[e[1],id]
-            M[id,2] = n[e[3],id] - n[e[1],id]
+            for iv = 2:dimension(topology(m))+1
+                M[id,iv-1] = n[e[iv],id] - n[e[1],id]
+            end
         end
 
         q = pinv(M) * (p - p0)
