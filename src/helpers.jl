@@ -1,5 +1,7 @@
 module Helpers
 
+using CMesh.Utils
+
 export lagrangeNodesP, lagrangeNodesQ
 
 """
@@ -15,19 +17,27 @@ function lagrangeNodesP(d::Integer, p::Integer; sorted::Bool=false)
     else
         if d == 1
             ls = linspace(0, 1, p+1)
-            nodes = hcat(ls[1], ls[end], ls[2:end-1])'
+            if p == 1
+                nodes = hcat(ls[1], ls[end])'
+            else
+                nodes = hcat(ls[1], ls[end], ls[2:end-1])'
+            end
         elseif d == 2
             # 3 vertex nodes
             v = [0. 0.; 1. 0.; 0. 1.]
-            # 3(p-1) edge nodes
-            ls = linspace(0, 1, (p-1)+2)[2:end-1]
-            e = vcat(hcat(ls, zeros(ls)),
-                     hcat(zeros(ls), ls),
-                     hcat(reverse(ls), ls))
-            # (p-1)(p-2)/2 interior nodes
-            i = tensorprod(ls, ls)
-            h = 1/p
-            i = i[sum(i, 2)[:] .< 1-h/2,:]
+            if p > 1
+                # 3(p-1) edge nodes
+                ls = linspace(0, 1, (p-1)+2)[2:end-1]
+                e = vcat(hcat(ls, zeros(ls)),
+                         hcat(zeros(ls), ls),
+                         hcat(reverse(ls), ls))
+                # (p-1)(p-2)/2 interior nodes
+                i = tensorprod(ls, ls)
+                h = 1/p
+                i = i[sum(i, 2)[:] .< 1-h/2,:]
+            else
+                e = i = zeros(0, d)
+            end
 
             nodes = vcat(v, e, i)
         elseif d == 3

@@ -36,19 +36,47 @@ m = UnitSquare(Int(2/rlo))
 # Function Space #
 #----------------#
 e = P1(2)
-fes = FESpace(m, e, x->true, x->zero(x))
+fes = FESpace(m, e, x->false, x->zero(x))
 
-#---------#
-# Problem #
-#---------#
-op = BilinearForm(Grad, Grad, fes, a)
-fnc = LinearForm(id, fes, 1)
-pde = PDE(op, fnc)
+#--------------#
+# Cell Problem #
+#--------------#
+lhs = BilinearForm(Grad, Grad, fes, a)
+rhs = LinearForm(Grad, fes, x -> a(x)[:,:,1])
+pde = PDE(lhs, rhs)
+
+#-------------------#
+# Periodic Boundary #
+#-------------------#
+master1{T<:Real}(x::Vector{T}) = x[1] < zero(T) + sqrt(eps(T))
+slave1{T<:Real}(x::Vector{T})  = x[1] > one(T) - sqrt(eps(T))
+master2{T<:Real}(x::Vector{T}) = x[2] < zero(T) + sqrt(eps(T))
+slave2{T<:Real}(x::Vector{T})  = x[2] > one(T) - sqrt(eps(T))
+
+pbc1 = PeriodicBoundary(fes, master1, slave1)
+pbc2 = PeriodicBoundary(fes, master2, slave2)
+
+#--------------#
+# Zero Average #
+#--------------#
+zac = ZeroAverageConstraint(fes)
 
 #----------#
 # Solution #
 #----------#
-Uh = solve(pde)
+assemble!(pde)
+A, b = system(pde)
+A, b = apply(pbc1, A, b)
+A, b = apply(pbc2, A, b)
+A, b = apply(zac, A, b)
+
+#Uh = solve(pde)
+Uh = A \ b
+
+M1 = transform(pb1)
+M2 = transform(pb2)
+
+Uh = M2 * (M1 * Uh)
 
 #-----------------#
 # Post Processing #
