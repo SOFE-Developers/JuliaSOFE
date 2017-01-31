@@ -4,7 +4,7 @@ using CMesh.Topology: AbstractSimplex, Segment, Triangle, Quadrilateral, Tetrahe
 
 using ..Elements
 
-export refelem, evalReferenceMaps, evalJacobianInverse, evalJacobianDeterminat
+export refelem, evalReferenceMaps, evalInverseMaps, evalJacobianInverse, evalJacobianDeterminat
 
 typealias Float AbstractFloat
 
@@ -128,9 +128,9 @@ end
 
     evalInverseMaps{E<:AbstractSimplex,T<:Real,S<:Integer}(m::Mesh{E}, points::AbstractArray{T,2}, hosts::AbstractArray{S,1})
 
-  Compute the preimage of each of the given (global) `points` by
+  Compute the preimage for each of the given (global) `points` by
   evaluating the inverse of the reference map of the
-  corresponding mesh cell in `m` specified in `hosts`.
+  corresponding mesh cell specified in `hosts`.
 """
 function evalInverseMaps{E<:AbstractSimplex,T<:Real,S<:Integer}(m::Mesh{E}, points::AbstractArray{T,2}, hosts::AbstractVector{S})
     @assert size(points, 2) >= dimension(topology(m))

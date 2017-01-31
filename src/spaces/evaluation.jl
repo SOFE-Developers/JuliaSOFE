@@ -4,7 +4,8 @@ export evaluate
 
 """
 
-    evaluate{T<:AbstractFloat}(fes::FESpace, dofs::AbstractVector{T}, deriv::Integer=0)
+    evaluate{T<:AbstractFloat}(fes::FESpace, dofs::AbstractVector{T}, 
+                               points::AbstractArray{T,2}, deriv::Integer=0)
 
   Evaluate the linear combination of the finite element
   space's basis functions or their derivatives in the 

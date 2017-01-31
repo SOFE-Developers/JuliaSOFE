@@ -1,5 +1,5 @@
 type PeriodicBoundary
-    fes::JuliaSOFE.FESpace
+    fes::FESpace
     master::Function
     slave::Function
 end
@@ -76,10 +76,6 @@ function apply(zac::ZeroAverageConstraint, A::AbstractMatrix, b::AbstractVector;
     assemble!(l)
     L = vector(l)
     
-    # A = [A                             reshape(L, nDoF(zac.fes), 1);
-    #      reshape(L, 1, nDoF(zac.fes))  0.]
-    # b = [b; 0.]
-
     A[idx,:] = L
     b[idx] = 0.
 
