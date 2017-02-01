@@ -68,7 +68,7 @@ function plot(el::Element, i::Integer; resolution::Integer=100,
 end
 
 function plot{T<:AbstractFloat}(fes::FESpace, uh::AbstractVector{T};
-                                resolution::Integer=3)
+                                resolution::Integer=3, edge_color="black")
     refmesh = visgrid(element(fes), resolution)
     vismesh = visgrid(mesh(fes), refmesh)
 
@@ -89,7 +89,7 @@ function plot{T<:AbstractFloat}(fes::FESpace, uh::AbstractVector{T};
         edges = entities(vismesh, 1)[boundary(vismesh,1),:] - 1
 
         pyvisofe[:trisurface](x, y, z, faces,
-                              edges=edges, edge_color="black")
+                              edges=edges, edge_color=edge_color)
     elseif D == 3
         x = coords[:,1]; y = coords[:,2]; z = coords[:,3]
         c = values[:]
