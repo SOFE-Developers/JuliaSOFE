@@ -4,15 +4,14 @@ using JuliaSOFE
 #--------------------------#
 # Random Coefficient Field #
 #--------------------------#
-nsamples = 20
-rlo = 0.02; rhi = 0.1
-cs = rhi + (1 - 2rhi) * rand(nsamples, 2)
-rs = rlo + (rhi - rlo) * rand(nsamples)
+epsilon = 1/2^5
+X = rand(Bool, Int(1/epsilon), Int(1/epsilon))
 
-sdfcs = [DCircle(cs[i,:], rs[i]) for i = 1:nsamples]
-sdf = DUnion(sdfcs...)
-
-inside{T<:Real}(xs::AbstractArray{T,2}) = sdf(xs) .< zero(T)
+function inside{T<:Real}(xs::AbstractVector{T})
+    c = Vector{Int}(ceil(xs/epsilon))
+    #return all(iseven.(c)) | all(isodd.(c))
+    return X[c[1], c[2]]
+end
 
 function a{T<:Real}(xs::AbstractArray{T,2})
     # A = zeros(T, size(xs, 1))
@@ -22,7 +21,7 @@ function a{T<:Real}(xs::AbstractArray{T,2})
         for id = 1:size(xs, 2)
             x[id] = xs[ip,id]
         end
-        A[ip,1,1] = A[ip,2,2] = sdf(x) < zero(T) ? convert(T, 100) : convert(T, 1)
+        A[ip,1,1] = A[ip,2,2] = inside(x) ? convert(T, 100) : convert(T, 1)
     end
     return A
 end
@@ -30,7 +29,7 @@ end
 #------#
 # Mesh #
 #------#
-m = UnitSquare(Int(2/rlo))
+m = UnitSquare(Int(1/epsilon)+1)
 
 #----------------#
 # Function Space #
@@ -87,8 +86,3 @@ M2 = transform(pbc2)
 
 phi1 = M2 * (M1 * phi1)
 phi2 = M2 * (M1 * phi2)
-
-#-----------------#
-# Post Processing #
-#-----------------#
-#plot(fes, Uh)
