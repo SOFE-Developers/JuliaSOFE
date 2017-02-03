@@ -6,7 +6,7 @@ include("randcoeff.jl")
 #--------------------------#
 # Random Coefficient Field #
 #--------------------------#
-epsilon = 1/2^1
+epsilon = 1/2^6
 beta = 0.2
 
 # X = checkerboard(Int(1/epsilon))
@@ -46,7 +46,7 @@ function ae{T<:Real}(xs::AbstractArray{T,2}; ɛ::Real=epsilon)
     return a(xs/ɛ)
 end
 
-if false
+if true
     #---------#
     # Problem #
     #---------#
@@ -65,7 +65,7 @@ if false
     rhs = LinearForm(id, fes, 1)
     pde = PDE(lhs, rhs)
 
-    Uh = solve(pde)
+    Ue = solve(pde)
 end
 
 if true
@@ -84,8 +84,8 @@ if true
     fes = FESpace(m, e, x->false, x->zero(x))
     
     lhs = BilinearForm(Grad, Grad, fes, ae)
-    rhs1 = LinearForm(Grad, fes, x -> ae(x)[:,:,1])
-    rhs2 = LinearForm(Grad, fes, x -> ae(x)[:,:,2])
+    rhs1 = LinearForm(Grad, fes, x -> -ae(x)[:,:,1])
+    rhs2 = LinearForm(Grad, fes, x -> -ae(x)[:,:,2])
     pde1 = PDE(lhs, rhs1)
     pde2 = PDE(lhs, rhs2)
     
@@ -129,4 +129,40 @@ if true
 
     phi1 = M2 * (M1 * phi1)
     phi2 = M2 * (M1 * phi2)
+
+    #------------------------#
+    # Effective Coefficients #
+    #------------------------#
+    qp, qw = quadData(lhs.quadrule, 2)
+    jac_dets = evalJacobianDeterminat(m, qp)
+    
+    dphi1 = evaluate(fes, phi1, qp, 1)
+    dphi2 = evaluate(fes, phi2, qp, 1)
+    dphi = cat(3, dphi1, dphi2)
+
+    A = evaluate(ae, qp, m)
+    Ah = zeros((2,2))
+    I = reshape(eye(2), (1,1,2,2))
+
+    for i = 1:2
+        for j = 1:2
+            e = I[:,:,:,i]
+            v = broadcast(+, e, dphi[:,:,i,:])
+            v = sum(broadcast(*, A, reshape(v, size(v)..., 1)), 4)[:,:,:,1]
+            dx = broadcast(*, jac_dets, reshape(qw, 1, length(qw)))
+            Ah[i,j] = sum(v[:,:,j] .* dx)
+        end
+    end
+
+    #---------------------#
+    # Homogenized Problem #
+    #---------------------#
+    eh = P1(2)
+    fesh = FESpace(m, eh, x->true, x->zero(x))
+    lhsh = BilinearForm(Grad, Grad, fesh, Ah)
+    rhsh = LinearForm(id, fesh, 1)
+    pdeh = PDE(lhsh, rhsh)
+
+    Uh = solve(pdeh)
+
 end
