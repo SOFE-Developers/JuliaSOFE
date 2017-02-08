@@ -103,7 +103,7 @@ if true
     #--------------#
     # Zero Average #
     #--------------#
-    zac = ZeroAverageConstraint(fes)
+    zac = ZeroAverage(fes)
 
     #----------#
     # Solution #

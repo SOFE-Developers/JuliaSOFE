@@ -35,9 +35,11 @@ include(joinpath(dirname(@__FILE__), "spaces", "FESpace.jl"))
 include(joinpath(dirname(@__FILE__), "operators", "Operators.jl"))
 @reexport using .Operators
 
-# Problems
+# Problems / Constraints
 include(joinpath(dirname(@__FILE__), "problems", "Problems.jl"))
+include(joinpath(dirname(@__FILE__), "problems", "Constraints.jl"))
 @reexport using .Problems
+@reexport using .Constraints
 
 # Postprocessing
 include(joinpath(dirname(@__FILE__), "postprocessing", "Visualization.jl"))
