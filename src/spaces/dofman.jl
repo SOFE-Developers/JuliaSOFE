@@ -27,7 +27,7 @@ function dofMap{T<:Integer}(fes::FESpace, d::Integer, mask::AbstractArray{T,1})
 
     rb = 0
     for dd = 0:d-1
-        d_dd = connectivity(topology(mesh(fes)), d, dd)
+        d_dd = array(connectivity(topology(mesh(fes)), d, dd))
         ra = rb + 1; rb += ndof[dd+1]
         fill_dofMap!(view(M, ra:rb, :), dofs[dd+1], d_dd)
     end

@@ -51,13 +51,13 @@ function transform(pbc::PeriodicBoundary)
     dists = distance(sdofnodes, nodes(mesh(pbc.fes)), mbfacets; ids=ids)
 
     ns = normalize!(normals(nodes(mesh(pbc.fes)), mbfacets[ids,:]))
-    mbfcells = cells(mesh(pbc.fes))[connectivity(topology(mesh(pbc.fes)), 1, 2)[mbmask,1],:]
+    mbfcells = cells(mesh(pbc.fes))[array(connectivity(topology(mesh(pbc.fes)), 1, 2))[mbmask,1],:]
     c = centroids(nodes(mesh(pbc.fes)), mbfcells[ids,:])
     p0 = nodes(mesh(pbc.fes))[mbfacets[ids,:],:][:,1,:]
     dot = sum(ns .* (c - p0), 2)
 
     msdofnodes = sdofnodes - copysign(dists, dot) .* ns
-    hosts = connectivity(topology(mesh(pbc.fes)), 1, 2)[mbmask,1][ids,1]
+    hosts = array(connectivity(topology(mesh(pbc.fes)), 1, 2))[mbmask,1][ids,1]
     preimg = evalInverseMaps(mesh(pbc.fes), msdofnodes, hosts)
 
     mbasis = evalBasis(element(pbc.fes), preimg, 0)

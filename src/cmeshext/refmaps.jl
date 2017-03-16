@@ -1,24 +1,18 @@
 
-using CMesh: Mesh, nodes, topology, entities, iter, incidence!
-using CMesh.Topology: AbstractSimplex, Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron
+using CMesh: Mesh, nodes, topology, entities
+using CMesh.Topology: Simplex, Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron
+using CMesh.Meshes
+
+using CMesh.Topology: AbstractEntity, Simplex, Orthotope,
+                      Vertex, Segment, Triangle, Quadrilateral, Tetrahedron, Hexahedron,
+                      subtype, dimension, nvertices
+using CMesh.Meshes: MeshEntity, mesh, index!, coord, entity
 
 using ..Elements
 
-export refelem, evalReferenceMaps, evalInverseMaps, evalJacobianInverse, evalJacobianDeterminat
+export evalReferenceMaps, evalInverseMaps, evalJacobianInverse, evalJacobianDeterminat
 
 typealias Float AbstractFloat
-
-"""
-
-    refelem(m::Mesh)
-
-Return a reference shape element for the mesh.
-"""
-refelem(m::Mesh{Segment})       = P1(1)
-refelem(m::Mesh{Triangle})      = P1(2)
-refelem(m::Mesh{Tetrahedron})   = P1(3)
-refelem(m::Mesh{Quadrilateral}) = Q1(2)
-refelem(m::Mesh{Hexahedron})    = Q1(3)
 
 """
 
@@ -28,111 +22,61 @@ refelem(m::Mesh{Hexahedron})    = Q1(3)
   at given local points on the reference domain.
 """
 function evalReferenceMaps{T<:Float}(m::Mesh, points::AbstractArray{T,2}, deriv::Integer=0)
-    nP, dimP = size(points)
+    nP, nD = size(points)
+    nE = number(m, nD)
+    nW = dimension(m)
 
-    coords = nodes(m)
-    nW = size(coords, 2)
-
-    basis = evalBasis(refelem(m), points, deriv)
-    nB, nP, nC, nD, nDD = size(basis, 1:5...)
-    @assert nC == 1 "nC = $nC == 1"
-    
-    elems = entities(topology(m), dimP)
-    nE = size(elems, 1)
-    @assert nB == size(elems, 2)
-
+    p = zeros(T, nD)
     if deriv == 0
-        @assert nD == 1
+        r = zeros(T, nW)
         R = zeros(T, nE, nP, nW)
     elseif deriv == 1
-        @assert nD == dimP "nD = $nD == $dimP = dimP"
+        r = zeros(T, nW, nD)
         R = zeros(T, nE, nP, nW, nD)
-    elseif deriv == 2
-        @assert nD == dimP "nD = $nD == $nDD = nDD"
-        R = zeros(T, nE, nP, nW, nD, nDD)
     end
+    
+    itr = MeshEntityIterator(m, nD)
+    start!(itr)
+    while !done(itr)
+        next!(itr)
+        me = entity(itr)
+        ie = index(me)
+        
+        for ip = 1:nP
+            for id = 1:nD
+                p[id] = points[ip,id]
+            end
 
-    fill_refmaps!(R, coords, elems, basis)
+            if deriv == 0
+                refmap!(r, p, me)
 
-    return R
-end
+                for iw = 1:nW
+                    R[ie,ip,iw] = r[iw]
+                end
+            elseif deriv == 1
+                jacobian!(r, p, me)
 
-@noinline function fill_refmaps!{T<:Float}(R::AbstractArray{T,3}, nodes::Array{T,2},
-                                           elems::Array{Int,2}, basis::Array{T,3})
-    for iw = 1:size(R,3) # nW
-        for ip = 1:size(R,2) # nP
-            for ie = 1:size(R,1) # nE
-                for ib = 1:size(basis,1) # nB
-                    R[ie,ip,iw] += nodes[elems[ie,ib],iw] * basis[ib,ip,1]
+                for id = 1:nD
+                    for iw = 1:nW
+                        R[ie,ip,iw,id] = r[iw,id]
+                    end
                 end
             end
         end
     end
 
-    return nothing
+    return R
 end
-
-@noinline function fill_refmaps!{T<:Float}(R::Array{T,4}, nodes::Array{T,2},
-                                           elems::Array{Int,2}, basis::Array{T,4})
-    for id = 1:size(R,4) # nD
-        fill_refmaps!(view(R, :, :, :, id), nodes, elems, basis[:,:,:,id])
-    end
-
-    return nothing
-end
-
-@noinline function fill_refmaps!{T<:Float}(R::Array{T,5}, nodes::Array{T,2},
-                                           elems::Array{Int,2}, basis::Array{T,5})
-    for jd = 1:size(R,5) # nD
-        for id = 1:size(R,4) # nD
-            fill_refmaps!(view(R, :, :, :, id, jd), nodes, elems, basis[:,:,:,id,jd])
-        end
-    end
-
-    return nothing
-end
-
-# @noinline function fill_refmaps!{T<:Float}(R::Array{T,4}, nodes::Array{T,2},
-#                                            elems::Array{Int,2}, basis::Array{T,4})
-#     for id = 1:size(R,4) # nD
-#         for iw = 1:size(R,3) # nW
-#             for ip = 1:size(R,2) # nP
-#                 for ie = 1:size(R,1) # nE
-#                     for ib = 1:size(basis,1) # nB
-#                         R[ie,ip,iw,id] += nodes[elems[ie,ib],iw] * basis[ib,ip,1,id]
-#                     end
-#                 end
-#             end
-#         end
-#     end
-# end
-
-# @noinline function fill_refmaps!{T<:Float}(R::Array{T,5}, nodes::Array{T,2},
-#                                            elems::Array{Int,2}, basis::Array{T,5})
-#     for jd = 1:size(R,5) # nD
-#         for id = 1:size(R,4) # nD
-#             for iw = 1:size(R,3) # nW
-#                 for ip = 1:size(R,2) # nP
-#                     for ie = 1:size(R,1) # nE
-#                         for ib = 1:size(basis,1) # nB
-#                             R[ie,ip,iw,id,jd] += nodes[elems[ie,ib],iw] * basis[ib,ip,1,id,jd]
-#                         end
-#                     end
-#                 end
-#             end
-#         end
-#     end
-# end
 
 """
 
-    evalInverseMaps{E<:AbstractSimplex,T<:Real,S<:Integer}(m::Mesh{E}, points::AbstractArray{T,2}, hosts::AbstractArray{S,1})
+    evalInverseMaps{E<:Simplex,T<:Real,S<:Integer}(m::Mesh{E}, points::AbstractArray{T,2}, hosts::AbstractArray{S,1})
 
   Compute the preimage for each of the given (global) `points` by
   evaluating the inverse of the reference map of the
   corresponding mesh cell specified in `hosts`.
 """
-function evalInverseMaps{E<:AbstractSimplex,T<:Real,S<:Integer}(m::Mesh{E}, points::AbstractArray{T,2}, hosts::AbstractVector{S})
+function evalInverseMaps{E<:Simplex,T<:Real,S<:Integer}(m::Mesh{E}, points::AbstractArray{T,2}, hosts::AbstractVector{S})
     @assert size(points, 2) >= dimension(topology(m))
     
     preimg = zeros(T, size(points, 1), dimension(topology(m)))
@@ -143,15 +87,17 @@ function evalInverseMaps{E<:AbstractSimplex,T<:Real,S<:Integer}(m::Mesh{E}, poin
     p = zeros(T, size(points, 2))
     p0 = zeros(T, size(points, 2))
     
-    it = iter(incidence!(topology(m), dimension(topology(m)), 0))
+    #it = iter(incidence!(topology(m), dimension(topology(m)), 0))
+    e = MeshEntity(m, dimension(topology(m)), 1)
     
     for ip = 1:size(points, 1)
-        e = it[hosts[ip]]
+        #e = it[hosts[ip]]
+        index!(e, hosts[ip])
         for id = 1:size(points, 2)
             p[id] = points[ip,id]
-            p0[id] = n[e[1],id]
+            p0[id] = n[entity(e, 0, 1),id]
             for iv = 2:dimension(topology(m))+1
-                M[id,iv-1] = n[e[iv],id] - n[e[1],id]
+                M[id,iv-1] = n[entity(e, 0, iv),id] - n[entity(e, 0, 1),id]
             end
         end
 
@@ -258,48 +204,58 @@ function fill_JacsDet!{T<:Float}(D::Array{T,2}, jacs::Array{T,4}, ::Type{Val{3}}
     end
 end
 
-# for compatibility
-function evalTrafo{T<:Float}(m::Mesh, dPhi::AbstractArray{T,4})
-    nE, nP, nW, nD = size(dPhi)
-    D = zeros(T, nE, nP)
-    fill_JacsDet!(D, dPhi, Val{nW}, Val{nD})
-    return D
-end
+######################################################################################################
+######################################################################################################
 
-function evalTrafoPair{T<:Float}(m::Mesh, points::AbstractArray{T,2})
-    DPhi = evalReferenceMap(m, points, 1);
-    trafo = evalTrafo(m, DPhi);
-    return (DPhi, trafo)
-end
+"""
 
-function evalTrafoTriple{T<:Float}(m::Mesh, points::AbstractArray{T,2})
-    R = evalReferenceMap(m, points, 1); # nExnPxnWx[...]
-    if m.dimension == 1
-        det = R; RInv = 1;
-    elseif m.dimension == 2
-        det = R[:,:,1,1].*R[:,:,2,2] - R[:,:,1,2].*R[:,:,2,1];
-        RInv = -R;
-        RInv[:,:,1,1] = R[:,:,2,2];
-        RInv[:,:,2,2] = R[:,:,1,1];
-    elseif m.dimension == 3
-        det = R[:,:,1,1].*R[:,:,2,2].*R[:,:,3,3] +
-            R[:,:,1,2].*R[:,:,2,3].*R[:,:,3,1] +
-            R[:,:,1,3].*R[:,:,2,1].*R[:,:,3,2] -
-            R[:,:,1,1].*R[:,:,2,3].*R[:,:,3,2] -
-            R[:,:,1,2].*R[:,:,2,1].*R[:,:,3,3] -
-            R[:,:,1,3].*R[:,:,2,2].*R[:,:,3,1];
-        RInv[:,:,1,1] = R[:,:,2,2].*R[:,:,3,3] - R[:,:,2,3].*R[:,:,3,2];
-        RInv[:,:,2,1] = -(R[:,:,2,1].*R[:,:,3,3] - R[:,:,3,1].*R[:,:,2,3]);
-        RInv[:,:,3,1] = R[:,:,2,1].*R[:,:,3,2] - R[:,:,2,2].*R[:,:,3,1];
-        RInv[:,:,1,2] = -(R[:,:,1,2].*R[:,:,3,3] - R[:,:,1,3].*R[:,:,3,2]);
-        RInv[:,:,2,2] = R[:,:,1,1].*R[:,:,3,3] - R[:,:,1,3].*R[:,:,3,1];
-        RInv[:,:,3,2] = -(R[:,:,1,1].*R[:,:,3,2] - R[:,:,1,2].*R[:,:,3,1]);
-        RInv[:,:,1,3] = R[:,:,1,2].*R[:,:,2,3] - R[:,:,1,3].*R[:,:,2,2];
-        RInv[:,:,2,3] = -(R[:,:,1,1].*R[:,:,2,3] - R[:,:,1,3].*R[:,:,2,1]);
-        RInv[:,:,3,3] = R[:,:,1,1].*R[:,:,2,2] - R[:,:,1,2].*R[:,:,2,1];
-    else
-        error("Non supported dimension")
+    refmap{T<:Real,E<:AbstractEntity}(p::AbstractVector{T}, me::MeshEntity{E})
+
+Evaluate the reference map corresponding to the mesh
+entity `me` in the local point `p`, i.e.
+map the point `p` from the reference domain
+to the global mesh entity `me`.
+"""
+function refmap{T<:Real,E<:Simplex}(p::AbstractVector{T}, me::MeshEntity{E})
+    return refmap!(zeros(T, dimension(mesh(me))), p, me)
+end
+function refmap!{T<:Real,E<:Simplex}(q::Vector{T}, p::AbstractVector{T}, me::MeshEntity{E})
+    dimw = dimension(mesh(me))
+    dimp = length(p); @assert dimp == dimension(me)
+
+    s = sum(p)
+    for id = 1:dimw
+        q[id] = (1 - s) * coord(me, 1, id)
+        for iv = 2:nvertices(E, dimp)
+            q[id] += p[iv-1] * coord(me, iv, id)
+        end
     end
-    RInv = broadcast(/, RInv, det);
-    return (R, RInv, det)
+    
+    return q
+end
+
+"""
+
+    jacobian{T<:Real,E<:AbstractEntity}(p::AbstractVector{T}, me::MeshEntity{E})
+
+Evaluate the jacobian of the reference map corresponding 
+to the mesh entity `me` in the local point `p`.
+"""
+function jacobian{T<:Real,E<:Simplex}(p::AbstractVector{T}, me::MeshEntity{E})
+    return jacobian!(zeros(T, dimension(mesh(me)), dimension(me)), p, me)
+end
+function jacobian!{T<:Real,E<:Simplex}(q::Array{T,2}, p::AbstractVector{T}, me::MeshEntity{E})
+    dimw = dimension(mesh(me))
+    dimp = length(p); @assert dimp == dimension(me)
+    
+    for id = 1:dimw
+        for jd = 1:dimp
+            q[id,jd] = -coord(me, 1, id) # ∂iφ1 == -1
+        end
+        for iv = 2:nvertices(E, dimp)
+            q[id,iv-1] += coord(me, iv, id) # ∂iφj == δij
+        end
+    end
+
+    return q
 end

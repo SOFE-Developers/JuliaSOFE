@@ -7,6 +7,10 @@ using ..CMeshExtensions: evalJacobianDeterminat
 
 import ..Elements: nDoF
 
+import CMesh.Meshes: mesh
+
+using CMesh.Topology: array
+
 export AbstractFESpace, FESpace, MixedFESpace
 export mesh, element, domain, domain!, shift, shift!
 export interpolate, evaluate
